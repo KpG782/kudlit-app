@@ -5,6 +5,7 @@ import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:kudlit_ph/core/error/exceptions.dart';
 import 'package:kudlit_ph/features/translator/data/datasources/ai_datasource.dart';
 import 'package:kudlit_ph/features/translator/data/datasources/gemma_model_file_type.dart';
+import 'package:kudlit_ph/features/translator/data/datasources/inference_gate.dart';
 import 'package:kudlit_ph/features/translator/domain/entities/baybayin_challenge.dart';
 import 'package:kudlit_ph/features/translator/domain/entities/chat_message.dart';
 import 'package:kudlit_ph/features/translator/domain/entities/gemma_model_info.dart';
@@ -19,6 +20,10 @@ import 'package:kudlit_ph/features/translator/domain/entities/gemma_model_info.d
 ///   be backgrounded or terminated while download proceeds.
 class LocalGemmaDatasource implements AiDatasource {
   LocalGemmaDatasource();
+
+  /// Serializes every native engine operation (generate, image analysis,
+  /// model load/close) so only one touches `flutter_gemma` at a time.
+  final InferenceGate _gate = InferenceGate();
 
   CancelToken? _cancelToken;
   InferenceModel? _activeModel;
@@ -80,10 +85,15 @@ class LocalGemmaDatasource implements AiDatasource {
     // Coalesce concurrent calls: callers share the in-flight result.
     if (_probing) return _pendingProbe!;
     _probing = true;
-    _pendingProbe = _doProbe(model).whenComplete(() {
-      _probing = false;
-      _pendingProbe = null;
-    });
+    _pendingProbe = _gate
+        .run<LocalGemmaReadiness>(
+          InferenceLane.system,
+          (CancelSignal _) => _doProbe(model),
+        )
+        .whenComplete(() {
+          _probing = false;
+          _pendingProbe = null;
+        });
     return _pendingProbe!;
   }
 
@@ -133,13 +143,16 @@ class LocalGemmaDatasource implements AiDatasource {
   /// Safe to call fire-and-forget after download completes.
   Future<void> ensureModelLoaded() async {
     if (_activeModel != null) return;
-    try {
-      _activeModel = await FlutterGemma.getActiveModel();
-      _activeModelHasVision = false;
-      debugPrint('[Gemma][local] model pre-warmed via ensureModelLoaded');
-    } catch (e) {
-      debugPrint('[Gemma][local] ensureModelLoaded failed (non-fatal): $e');
-    }
+    await _gate.run<void>(InferenceLane.system, (CancelSignal _) async {
+      if (_activeModel != null) return;
+      try {
+        _activeModel = await FlutterGemma.getActiveModel();
+        _activeModelHasVision = false;
+        debugPrint('[Gemma][local] model pre-warmed via ensureModelLoaded');
+      } catch (e) {
+        debugPrint('[Gemma][local] ensureModelLoaded failed (non-fatal): $e');
+      }
+    });
   }
 
   Future<bool> isInstalled(GemmaModelInfo model) async {
@@ -191,9 +204,29 @@ class LocalGemmaDatasource implements AiDatasource {
   }
 
   /// Lazily creates the active model + chat and streams text tokens.
+  ///
+  /// [lane] selects the gate lane (see [InferenceLane]); rapid lanes such as
+  /// `scan` supersede their own prior request.
   @override
   Stream<String> generate(
     List<ChatMessage> history, {
+    String? systemInstruction,
+    String lane = InferenceLane.chat,
+  }) {
+    return _gate.runStream<String>(
+      lane,
+      (CancelSignal signal) => _generate(
+        history,
+        systemInstruction: systemInstruction,
+        signal: signal,
+      ),
+      supersede: InferenceLane.superseding.contains(lane),
+    );
+  }
+
+  Stream<String> _generate(
+    List<ChatMessage> history, {
+    required CancelSignal signal,
     String? systemInstruction,
   }) async* {
     try {
@@ -226,6 +259,7 @@ class LocalGemmaDatasource implements AiDatasource {
 
       await for (final ModelResponse response
           in _chat!.generateChatResponseAsync()) {
+        if (signal.isCancelled) break;
         if (response is TextResponse) {
           yield response.token;
         }
@@ -241,6 +275,25 @@ class LocalGemmaDatasource implements AiDatasource {
   @override
   Stream<String> analyzeImage(
     Uint8List imageBytes, {
+    String mimeType = 'image/png',
+    String? prompt,
+    String lane = InferenceLane.vision,
+  }) {
+    return _gate.runStream<String>(
+      lane,
+      (CancelSignal signal) => _analyzeImage(
+        imageBytes,
+        mimeType: mimeType,
+        prompt: prompt,
+        signal: signal,
+      ),
+      supersede: InferenceLane.superseding.contains(lane),
+    );
+  }
+
+  Stream<String> _analyzeImage(
+    Uint8List imageBytes, {
+    required CancelSignal signal,
     String mimeType = 'image/png',
     String? prompt,
   }) async* {
@@ -284,6 +337,7 @@ class LocalGemmaDatasource implements AiDatasource {
       );
       await for (final ModelResponse response
           in imageChat.generateChatResponseAsync()) {
+        if (signal.isCancelled) break;
         if (response is TextResponse) {
           yield response.token;
         }
@@ -320,10 +374,12 @@ class LocalGemmaDatasource implements AiDatasource {
 
   @override
   Future<void> dispose() async {
-    await _activeModel?.close();
-    _activeModel = null;
-    _activeModelHasVision = false;
-    _chat = null;
+    await _gate.run<void>(InferenceLane.system, (CancelSignal _) async {
+      await _activeModel?.close();
+      _activeModel = null;
+      _activeModelHasVision = false;
+      _chat = null;
+    });
   }
 }
 

@@ -8,6 +8,7 @@ import 'package:kudlit_ph/features/home/presentation/providers/app_preferences_p
 import 'package:kudlit_ph/features/home/presentation/providers/translate_page_controller.dart';
 import 'package:kudlit_ph/features/home/presentation/utils/safe_ai_output.dart';
 import 'package:kudlit_ph/features/learning/domain/entities/gemma_prompts.dart';
+import 'package:kudlit_ph/features/translator/data/datasources/inference_gate.dart';
 import 'package:kudlit_ph/features/translator/presentation/providers/translator_providers.dart';
 
 @immutable
@@ -127,7 +128,11 @@ class TranslateSketchpadController extends Notifier<TranslateSketchpadState> {
       await for (final String chunk
           in ref
               .read(localGemmaDatasourceProvider)
-              .analyzeImage(imageBytes, prompt: prompt)) {
+              .analyzeImage(
+                imageBytes,
+                prompt: prompt,
+                lane: InferenceLane.sketch,
+              )) {
         buffer.write(chunk);
         final String cleaned = cleanAssistantOutput(buffer.toString());
         final String displayResponse = GemmaPrompts.parseThinkBlock(

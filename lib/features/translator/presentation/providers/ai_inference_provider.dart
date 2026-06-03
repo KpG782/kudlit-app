@@ -168,13 +168,21 @@ class AiInferenceNotifier extends _$AiInferenceNotifier {
 
   /// Streams model output. Caller is responsible for appending the
   /// user message to history first.
+  ///
+  /// [lane] selects the inference-gate lane (see `InferenceLane`); defaults to
+  /// the queued `'chat'` lane.
   Stream<String> generateResponse(
     List<ChatMessage> history, {
     String? systemInstruction,
+    String lane = 'chat',
   }) {
     return ref
         .read(aiInferenceRepositoryProvider)
-        .generateResponse(history, systemInstruction: systemInstruction);
+        .generateResponse(
+          history,
+          systemInstruction: systemInstruction,
+          lane: lane,
+        );
   }
 
   String _failureMessage(Failure f) => switch (f) {

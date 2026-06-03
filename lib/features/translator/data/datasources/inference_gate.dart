@@ -28,6 +28,30 @@ class CancelSignal {
   }
 }
 
+/// Well-known lane identifiers for the inference pipeline. Lanes in
+/// [superseding] drop their own stale, in-flight work when a newer request
+/// arrives; all other lanes queue first-in-first-out.
+abstract final class InferenceLane {
+  /// Interactive text generation (Butty, translate, lessons, help).
+  static const String chat = 'chat';
+
+  /// One-shot image analysis (translate sketchpad fallback, lessons).
+  static const String vision = 'vision';
+
+  /// Scanner live-frame evaluation — rapid, self-replacing.
+  static const String scan = 'scan';
+
+  /// Sketchpad feedback — rapid, self-replacing.
+  static const String sketch = 'sketch';
+
+  /// Background/lifecycle work: readiness probe, prewarm, memory-extraction,
+  /// dispose. Lowest priority; never cancels a foreground lane.
+  static const String system = 'system';
+
+  /// Lanes whose newer requests supersede (cancel) their older ones.
+  static const Set<String> superseding = <String>{scan, sketch};
+}
+
 /// Serializes access to the single native inference engine so at most one
 /// operation touches it at any instant. Every operation queues strictly
 /// first-in-first-out. Operations that opt into `supersede` cancel the

@@ -36,9 +36,14 @@ abstract interface class AiInferenceRepository {
   ///
   /// Implementation chooses local vs. cloud based on the user's
   /// `AiPreference`. The stream completes when generation ends.
+  ///
+  /// [lane] is forwarded to the local inference gate (see `InferenceLane`);
+  /// rapid lanes such as `'scan'` supersede their own prior request, while
+  /// the default `'chat'` queues. Ignored by the cloud datasource.
   Stream<String> generateResponse(
     List<ChatMessage> history, {
     String? systemInstruction,
+    String lane = 'chat',
   });
 
   // ─── 2. Image analysis ────────────────────────────────────────────────────
@@ -46,12 +51,14 @@ abstract interface class AiInferenceRepository {
   /// Streams a description / translation of drawn or photographed
   /// Baybayin characters in [imageBytes].
   ///
-  /// Always routes to the cloud datasource (requires network).
-  /// [mimeType] defaults to `'image/png'`.
+  /// [mimeType] defaults to `'image/png'`. [lane] is forwarded to the local
+  /// inference gate (see `InferenceLane`); `'scan'`/`'sketch'` supersede their
+  /// own prior request. Ignored by the cloud datasource.
   Stream<String> analyzeImage(
     Uint8List imageBytes, {
     String mimeType,
     String? prompt,
+    String lane = 'vision',
   });
 
   // ─── 3. Challenge generation ──────────────────────────────────────────────

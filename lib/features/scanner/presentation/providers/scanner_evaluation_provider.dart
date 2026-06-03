@@ -9,6 +9,7 @@ import 'package:kudlit_ph/features/learning/domain/entities/gemma_prompts.dart';
 import 'package:kudlit_ph/features/scanner/domain/entities/baybayin_detection.dart';
 import 'package:kudlit_ph/features/scanner/domain/entities/scan_result.dart';
 import 'package:kudlit_ph/features/scanner/presentation/providers/scan_history_provider.dart';
+import 'package:kudlit_ph/features/translator/data/datasources/inference_gate.dart';
 import 'package:kudlit_ph/features/translator/domain/entities/chat_message.dart';
 import 'package:kudlit_ph/features/translator/presentation/providers/ai_inference_provider.dart';
 import 'package:kudlit_ph/features/translator/presentation/providers/translator_providers.dart';
@@ -91,18 +92,22 @@ class ScannerEvaluationNotifier extends Notifier<ScanEvalState> {
             imageBytes,
             mimeType: 'image/jpeg',
             prompt: GemmaPrompts.scanTranslatorModeWithImage(candidates),
+            lane: InferenceLane.scan,
           );
     } else {
       // Text-only path — vocabulary + scanner reliability chain-of-thought.
       final String query =
           'Detected glyphs (left to right): ${tokens.join(", ")}. '
           'Which word is this?';
-      stream = ref.read(aiInferenceNotifierProvider.notifier).generateResponse(
-        <ChatMessage>[
-          ChatMessage(text: query, isUser: true, timestamp: DateTime.now()),
-        ],
-        systemInstruction: GemmaPrompts.scanTranslatorMode(candidates),
-      );
+      stream = ref
+          .read(aiInferenceNotifierProvider.notifier)
+          .generateResponse(
+            <ChatMessage>[
+              ChatMessage(text: query, isUser: true, timestamp: DateTime.now()),
+            ],
+            systemInstruction: GemmaPrompts.scanTranslatorMode(candidates),
+            lane: InferenceLane.scan,
+          );
     }
 
     unawaited(_listenToTranslation(stream, generation));
@@ -136,6 +141,7 @@ class ScannerEvaluationNotifier extends Notifier<ScanEvalState> {
         .generateResponse(
           history,
           systemInstruction: GemmaPrompts.assistantMode,
+          lane: InferenceLane.scan,
         );
 
     unawaited(_listenToFollowUp(stream, generation));

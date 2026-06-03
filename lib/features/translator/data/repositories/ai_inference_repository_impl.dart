@@ -77,6 +77,7 @@ class AiInferenceRepositoryImpl implements AiInferenceRepository {
   Stream<String> generateResponse(
     List<ChatMessage> history, {
     String? systemInstruction,
+    String lane = 'chat',
   }) {
     if (_useCloud) {
       debugPrint(
@@ -93,6 +94,7 @@ class AiInferenceRepositoryImpl implements AiInferenceRepository {
     return _localWithCloudFallback(
       history,
       systemInstruction: systemInstruction,
+      lane: lane,
     );
   }
 
@@ -104,6 +106,7 @@ class AiInferenceRepositoryImpl implements AiInferenceRepository {
   Stream<String> _localWithCloudFallback(
     List<ChatMessage> history, {
     String? systemInstruction,
+    String lane = 'chat',
   }) async* {
     bool localFailed = false;
     try {
@@ -111,6 +114,7 @@ class AiInferenceRepositoryImpl implements AiInferenceRepository {
       await for (final String token in localDatasource.generate(
         history,
         systemInstruction: systemInstruction,
+        lane: lane,
       )) {
         yield token;
       }
@@ -137,6 +141,7 @@ class AiInferenceRepositoryImpl implements AiInferenceRepository {
     Uint8List imageBytes, {
     String mimeType = 'image/png',
     String? prompt,
+    String lane = 'vision',
   }) {
     if (kIsWeb || _useCloud) {
       return cloudDatasource.analyzeImage(
@@ -149,6 +154,7 @@ class AiInferenceRepositoryImpl implements AiInferenceRepository {
       imageBytes,
       mimeType: mimeType,
       prompt: prompt,
+      lane: lane,
     );
   }
 
@@ -161,6 +167,7 @@ class AiInferenceRepositoryImpl implements AiInferenceRepository {
     Uint8List imageBytes, {
     String mimeType = 'image/png',
     String? prompt,
+    String lane = 'vision',
   }) async* {
     bool localFailed = false;
     try {
@@ -168,6 +175,7 @@ class AiInferenceRepositoryImpl implements AiInferenceRepository {
         imageBytes,
         mimeType: mimeType,
         prompt: prompt,
+        lane: lane,
       )) {
         yield token;
       }

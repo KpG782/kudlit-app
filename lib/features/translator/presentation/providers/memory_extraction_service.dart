@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kudlit_ph/features/learning/domain/entities/gemma_prompts.dart';
+import 'package:kudlit_ph/features/translator/data/datasources/inference_gate.dart';
 import 'package:kudlit_ph/features/translator/domain/entities/chat_memory_fact.dart';
 import 'package:kudlit_ph/features/translator/domain/entities/chat_message.dart';
 import 'package:kudlit_ph/features/translator/presentation/providers/ai_inference_provider.dart';
@@ -80,9 +81,11 @@ class MemoryExtractionService {
 
       final Stream<String> stream = _ref
           .read(aiInferenceNotifierProvider.notifier)
-          .generateResponse(<ChatMessage>[
-            userMessage,
-          ], systemInstruction: GemmaPrompts.memoryExtractor);
+          .generateResponse(
+            <ChatMessage>[userMessage],
+            systemInstruction: GemmaPrompts.memoryExtractor,
+            lane: InferenceLane.system,
+          );
 
       final StringBuffer buf = StringBuffer();
       await for (final String chunk in stream) {

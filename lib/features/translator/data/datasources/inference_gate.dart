@@ -29,20 +29,24 @@ class CancelSignal {
 }
 
 /// Serializes access to the single native inference engine so at most one
-/// operation touches it at any instant. Operations in the same lane supersede
-/// each other (the newer cancels the older); operations in different lanes
-/// queue strictly first-in-first-out and never cancel one another.
+/// operation touches it at any instant. Every operation queues strictly
+/// first-in-first-out. Operations that opt into `supersede` cancel the
+/// previous pending/in-flight op in their own lane (used for rapid,
+/// self-replacing streams like scanner frames); operations that do not
+/// (the default) never cancel one another.
 class InferenceGate {
   Future<void> _tail = Future<void>.value();
   final Map<String, CancelSignal> _activeByLane = <String, CancelSignal>{};
 
-  /// Runs [op] after every previously enqueued operation has completed. A
-  /// newer op sharing [lane] cancels the pending/in-flight op in that lane.
-  Future<T> run<T>(String lane, Future<T> Function(CancelSignal) op) {
-    _activeByLane[lane]?._cancel();
-    final CancelSignal signal = CancelSignal();
-    _activeByLane[lane] = signal;
-
+  /// Runs [op] after every previously enqueued operation has completed. When
+  /// [supersede] is true, a newer op sharing [lane] cancels the pending or
+  /// in-flight op in that lane; otherwise same-lane ops queue.
+  Future<T> run<T>(
+    String lane,
+    Future<T> Function(CancelSignal) op, {
+    bool supersede = false,
+  }) {
+    final CancelSignal signal = _enter(lane, supersede: supersede);
     final Future<T> result = _tail.then((_) => op(signal));
     _tail = result.then<void>((_) {}, onError: (_) {});
     result.whenComplete(() => _release(lane, signal));
@@ -51,10 +55,12 @@ class InferenceGate {
 
   /// Streaming counterpart of [run]. Forwards [op]'s values until the stream
   /// completes or the lane is superseded, then releases the gate.
-  Stream<T> runStream<T>(String lane, Stream<T> Function(CancelSignal) op) {
-    _activeByLane[lane]?._cancel();
-    final CancelSignal signal = CancelSignal();
-    _activeByLane[lane] = signal;
+  Stream<T> runStream<T>(
+    String lane,
+    Stream<T> Function(CancelSignal) op, {
+    bool supersede = false,
+  }) {
+    final CancelSignal signal = _enter(lane, supersede: supersede);
 
     final StreamController<T> controller = StreamController<T>();
     final Future<void> done = _tail.then((_) async {
@@ -84,6 +90,15 @@ class InferenceGate {
   /// replacement.
   void cancelLane(String lane) {
     _activeByLane[lane]?._cancel();
+  }
+
+  CancelSignal _enter(String lane, {required bool supersede}) {
+    if (supersede) {
+      _activeByLane[lane]?._cancel();
+    }
+    final CancelSignal signal = CancelSignal();
+    _activeByLane[lane] = signal;
+    return signal;
   }
 
   void _release(String lane, CancelSignal signal) {

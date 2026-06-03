@@ -50,6 +50,25 @@ void main() {
       expect(completionOrder, <String>['chat', 'system']);
     });
 
+    test('same-lane ops queue (both run) when supersede is not set', () async {
+      final InferenceGate gate = InferenceGate();
+      final List<String> ran = <String>[];
+
+      Future<void> body(String tag) {
+        return gate.run<void>('chat', (CancelSignal sig) async {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          if (sig.isCancelled) return;
+          ran.add(tag);
+        });
+      }
+
+      final Future<void> a = body('a');
+      final Future<void> b = body('b');
+      await Future.wait<void>(<Future<void>>[a, b]);
+
+      expect(ran, <String>['a', 'b']);
+    });
+
     test(
       'supersedes an in-flight op when a newer op shares its lane',
       () async {
@@ -73,7 +92,7 @@ void main() {
           CancelSignal sig,
         ) async {
           return 'second-done';
-        });
+        }, supersede: true);
 
         expect(await first, 'first-cancelled');
         expect(firstObservedCancel, isTrue);
@@ -103,7 +122,7 @@ void main() {
         CancelSignal sig,
       ) async {
         secondRan = true;
-      });
+      }, supersede: true);
 
       await second;
       final int countAtSupersede = received.length;

@@ -119,9 +119,15 @@ class LearnHomeBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<Map<String, LessonProgress>> progressAsync = ref.watch(
+      lessonProgressNotifierProvider,
+    );
     final Map<String, LessonProgress> progressMap =
-        ref.watch(lessonProgressNotifierProvider).value ??
-        <String, LessonProgress>{};
+        progressAsync.value ?? <String, LessonProgress>{};
+    // The lesson list is static, so we keep showing it; but if progress failed
+    // to load we surface a non-blocking retry banner so a sync error doesn't
+    // silently read as "nothing completed / everything locked".
+    final bool progressFailed = progressAsync.hasError && !progressAsync.hasValue;
 
     final int streakCount = ref.watch(streakProvider).value ?? 0;
 
@@ -145,6 +151,13 @@ class LearnHomeBody extends ConsumerWidget {
             children: <Widget>[
               ButtyTalkCard(onTap: onChatWithButty),
               const SizedBox(height: 14),
+              if (progressFailed) ...<Widget>[
+                _ProgressSyncErrorBanner(
+                  onRetry: () =>
+                      ref.invalidate(lessonProgressNotifierProvider),
+                ),
+                const SizedBox(height: 14),
+              ],
               _QuickActionsRow(
                 streakCount: streakCount,
                 hasCompletedAny: hasCompletedAny,
@@ -174,6 +187,38 @@ class LearnHomeBody extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ProgressSyncErrorBanner extends StatelessWidget {
+  const _ProgressSyncErrorBanner({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
+      decoration: BoxDecoration(
+        color: cs.errorContainer.withAlpha(70),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.error.withAlpha(70)),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.cloud_off_rounded, size: 18, color: cs.error),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Couldn\'t sync your progress.',
+              style: TextStyle(fontSize: 12.5, color: cs.onErrorContainer),
+            ),
+          ),
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
       ),
     );
   }

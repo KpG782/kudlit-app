@@ -58,10 +58,9 @@ Legend: ✅ handled · ⚠️ partial · ❌ missing · 🩹 fixed this pass
 ## 4. Long-term plan (prioritized) — what's good to update next
 
 ### P1 — "failed load looks like a wiped account" (highest user-trust risk)
-- **Stop collapsing `AsyncValue` to defaults** in three places so a load failure isn't indistinguishable from an empty/new account:
-  - `learning_progress_screen.dart:35-37` (`.value ?? {}`) → `.when(loading: skeleton, error: retry, data:)`.
-  - `learn_home_body.dart:122-126` (progress + streak `.value ??`) → same; show skeleton/retry.
-  - Profile: `profile_management_provider.dart:79,180` folds `Left → None`, so `profile_tab.dart:148` shows an anonymous fallback on error. → surface the failure (keep `AsyncError`) and render an error+retry banner; add a loading skeleton for the name/avatar.
+- 🩹 **DONE — `learning_progress_screen.dart:35`**: added loading + error/retry guards (`_ProgressScaffold` / `_ProgressErrorView`) so a failed fetch no longer renders as "0 lessons, everything locked". Empty map still = genuine new user.
+- 🩹 **DONE — `learn_home_body.dart:122`**: the Learn tab keeps its static lessons but now shows a non-blocking "Couldn't sync your progress — Retry" banner on `hasError`. Streak already degrades gracefully via the local-persistence cache.
+- ⏸️ **DEFERRED (domain-layer prerequisite) — Profile.** `profile_management_provider.dart:79` folds `Left → None`, but the `GetProfileSummary` use case returns `Left` for **both** a real fetch error **and** a brand-new user with no profile row. Surfacing `Left` as an error would wrongly show an error banner to legitimate new users. **Fix the domain layer first:** have the repository/use case return `Right(empty summary)` for "no row yet" and reserve `Left` for real failures; *then* `profile_tab.dart:148` can show an error+retry on `hasError` safely. (No `requireValue` consumers exist, so the provider flip is otherwise safe.) Current behavior degrades to the email-prefix name — not a data-loss view, so this is lower severity than the two above.
 
 ### P2 — scanner robustness
 - **Native camera-permission-denied** panel (check `permission_handler` before `YOLOView`; "Open settings" CTA).

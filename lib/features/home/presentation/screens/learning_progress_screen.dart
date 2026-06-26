@@ -32,9 +32,27 @@ class LearningProgressScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<Map<String, LessonProgress>> progressAsync = ref.watch(
+      lessonProgressNotifierProvider,
+    );
+
+    // Distinguish a real load failure from a genuinely empty/new account: a
+    // failed fetch must NOT render as "0 lessons, everything locked".
+    if (progressAsync.isLoading && !progressAsync.hasValue) {
+      return const _ProgressScaffold(
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (progressAsync.hasError && !progressAsync.hasValue) {
+      return _ProgressScaffold(
+        child: _ProgressErrorView(
+          onRetry: () => ref.invalidate(lessonProgressNotifierProvider),
+        ),
+      );
+    }
+
     final Map<String, LessonProgress> progressMap =
-        ref.watch(lessonProgressNotifierProvider).value ??
-        <String, LessonProgress>{};
+        progressAsync.value ?? <String, LessonProgress>{};
 
     final int completed = progressMap.values
         .where((LessonProgress p) => p.completed)
@@ -766,6 +784,62 @@ class _ActionChip extends StatelessWidget {
           fontSize: 11.5,
           fontWeight: FontWeight.w700,
           color: fg,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Loading / error scaffolds ────────────────────────────────────────────────
+
+class _ProgressScaffold extends StatelessWidget {
+  const _ProgressScaffold({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Learning Progress'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => context.pop(),
+        ),
+      ),
+      body: child,
+    );
+  }
+}
+
+class _ProgressErrorView extends StatelessWidget {
+  const _ProgressErrorView({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.cloud_off_rounded, size: 40, color: cs.error),
+            const SizedBox(height: 12),
+            const Text(
+              'We couldn\'t load your progress.\n'
+              'Check your connection and try again.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            FilledButton.tonalIcon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Try again'),
+            ),
+          ],
         ),
       ),
     );

@@ -388,7 +388,8 @@ class TranslateTextController extends Notifier<TranslateTextState> {
     } catch (error) {
       state = state.copyWith(
         aiBusy: false,
-        aiResponse: 'Could not complete AI request: $error',
+        aiResponse:
+            'Butty couldn\'t finish that. Check your connection and try again.',
         clearAiSource: true,
       );
       if (rethrowOnError) {

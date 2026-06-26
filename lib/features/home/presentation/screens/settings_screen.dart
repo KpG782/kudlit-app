@@ -33,6 +33,8 @@ class SettingsScreen extends ConsumerWidget {
                 onActionTap: (String message) =>
                     _showActionSnackBar(context, message),
                 onSignOutTap: () async {
+                  final bool confirmed = await _confirmSignOut(context);
+                  if (!confirmed || !context.mounted) return;
                   await ref.read(authNotifierProvider.notifier).signOut();
                   if (context.mounted) {
                     context.go(AppConstants.routeLogin);
@@ -50,6 +52,31 @@ class SettingsScreen extends ConsumerWidget {
 
 void _showActionSnackBar(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+}
+
+Future<bool> _confirmSignOut(BuildContext context) async {
+  return await showDialog<bool>(
+        context: context,
+        builder: (BuildContext dialogContext) {
+          return AlertDialog(
+            title: const Text('Sign out?'),
+            content: const Text(
+              'You can sign back in anytime. Your synced progress stays safe.',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Sign out'),
+              ),
+            ],
+          );
+        },
+      ) ??
+      false;
 }
 
 Future<void> _confirmAndDeleteAccount(BuildContext context, WidgetRef ref) async {

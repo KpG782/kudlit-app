@@ -20,7 +20,8 @@ class TranslateModelStatusBanner extends ConsumerWidget {
 
     final Widget content = stateAsync.when(
       loading: () => _line(cs, 'Preparing offline Gemma…'),
-      error: (Object e, _) => _line(cs, 'Offline model error: $e', error: true),
+      error: (Object e, _) =>
+          _line(cs, 'Offline Gemma is unavailable right now.', error: true),
       data: (AiInferenceState state) => _StatusContent(state: state),
     );
 

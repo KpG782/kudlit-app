@@ -110,7 +110,11 @@ class _LessonStageScreenState extends ConsumerState<LessonStageScreen> {
       body: SafeArea(
         child: async.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (Object e, _) => _ErrorView(message: e.toString()),
+          error: (Object e, _) => _ErrorView(
+            onRetry: () => ref
+                .read(lessonControllerProvider.notifier)
+                .loadLesson(widget.lessonId),
+          ),
           data: (LessonState? data) {
             if (data == null) {
               return const Center(child: CircularProgressIndicator());
@@ -275,9 +279,9 @@ class _ModeSwitcher extends StatelessWidget {
 }
 
 class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message});
+  const _ErrorView({required this.onRetry});
 
-  final String message;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -289,11 +293,24 @@ class _ErrorView extends StatelessWidget {
           children: <Widget>[
             const Icon(Icons.error_outline_rounded, size: 48),
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
+            const Text(
+              'We couldn\'t load this lesson.\nPlease try again.',
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () => returnToLearn(context),
-              child: const Text('Back'),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                OutlinedButton(
+                  onPressed: () => returnToLearn(context),
+                  child: const Text('Back'),
+                ),
+                const SizedBox(width: 12),
+                FilledButton(
+                  onPressed: onRetry,
+                  child: const Text('Try again'),
+                ),
+              ],
             ),
           ],
         ),

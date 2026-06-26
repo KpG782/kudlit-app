@@ -244,7 +244,9 @@ class _ChatHistorySection extends ConsumerWidget {
       ),
       child: async.when(
         loading: () => const _Skeleton(),
-        error: (Object e, _) => _ErrorBlock(message: e.toString()),
+        error: (Object e, _) => _ErrorBlock(
+          onRetry: () => ref.invalidate(chatHistoryNotifierProvider),
+        ),
         data: (List<ChatMessage> msgs) => _ChatHistoryBody(messages: msgs),
       ),
     );
@@ -622,7 +624,9 @@ class _MemorySection extends ConsumerWidget {
       ),
       child: async.when(
         loading: () => const _Skeleton(),
-        error: (Object e, _) => _ErrorBlock(message: e.toString()),
+        error: (Object e, _) => _ErrorBlock(
+          onRetry: () => ref.invalidate(chatMemoryNotifierProvider),
+        ),
         data: (List<ChatMemoryFact> facts) => _MemoryBody(facts: facts),
       ),
     );
@@ -1095,15 +1099,25 @@ class _Skeleton extends StatelessWidget {
 }
 
 class _ErrorBlock extends StatelessWidget {
-  const _ErrorBlock({required this.message});
-  final String message;
+  const _ErrorBlock({required this.onRetry});
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Text(message, style: TextStyle(color: cs.error, fontSize: 12.5)),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              'Couldn\'t load this. Check your connection.',
+              style: TextStyle(color: cs.error, fontSize: 12.5),
+            ),
+          ),
+          TextButton(onPressed: onRetry, child: const Text('Try again')),
+        ],
+      ),
     );
   }
 }

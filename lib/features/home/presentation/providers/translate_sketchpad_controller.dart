@@ -196,7 +196,8 @@ class TranslateSketchpadController extends Notifier<TranslateSketchpadState> {
     } catch (error) {
       state = state.copyWith(
         aiBusy: false,
-        aiResponse: 'Could not complete sketch feedback: $error',
+        aiResponse:
+            'Butty couldn\'t review your drawing. Please try again.',
         clearAiSource: true,
       );
       if (rethrowOnError) {

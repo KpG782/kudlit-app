@@ -138,3 +138,87 @@ These were intentionally **not** done in this pass. Each must be handled before
 | Adaptive Android icon | Not started | `flutter_launcher_icons` config + run |
 
 See the main audit report for full rationale and `file:line` evidence.
+
+---
+
+## 6. ✅ Implemented in the follow-up pass (2026-06-26, batches 2–4)
+
+Now done + pushed: **InferenceGate** (on-device Gemma serialization), **network
+timeouts** (gemini-proxy 30s; YOLO download 30s connect + 60s stall), **Sentry**
+crash reporting (gated by `--dart-define=SENTRY_DSN`), **streak local
+persistence**, **signed-AAB release CI** (`.github/workflows/release-android.yml`)
+with obfuscation + symbol upload, **adaptive-icon config**, plus the earlier
+account-deletion flow, crash hooks, `PopScope`, and the UX pass (retryable error
+states, TTS "Listen" button, lesson-complete review prompt).
+
+## 7. ⏸️ Deliberately documented (not committed) — needs the toolchain to verify
+
+Two items were intentionally **not** committed blind because they're on fragile
+critical paths and this environment has no Flutter compiler to verify them. Paste
+these in and run `flutter analyze` to confirm.
+
+### Secure session storage (auth critical path)
+A wrong `LocalStorage` signature breaks the whole build, and wrong behavior
+silently logs users out — so verify against your `supabase_flutter` 2.8.x.
+
+```dart
+// lib/core/auth/secure_local_storage.dart
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+class SecureLocalStorage extends LocalStorage {
+  SecureLocalStorage();
+  static const String _key = 'supabase.session';
+  final FlutterSecureStorage _storage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Future<String?> accessToken() async {
+    final String? raw = await _storage.read(key: _key);
+    if (raw == null) return null;
+    try {
+      final Map<String, dynamic> m = jsonDecode(raw) as Map<String, dynamic>;
+      final Object? t = m['access_token'] ??
+          (m['currentSession'] as Map<String, dynamic>?)?['access_token'];
+      return t is String ? t : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<bool> hasAccessToken() => _storage.containsKey(key: _key);
+
+  @override
+  Future<void> persistSession(String s) => _storage.write(key: _key, value: s);
+
+  @override
+  Future<void> removePersistedSession() => _storage.delete(key: _key);
+}
+```
+Then in `main.dart`:
+```dart
+await Supabase.initialize(
+  url: SupabaseConfig.url,
+  anonKey: SupabaseConfig.anonKey,
+  authOptions: FlutterAuthClientOptions(localStorage: SecureLocalStorage()),
+);
+```
+
+### High-contrast theme + reduced-motion (currently inert toggles)
+The `highContrast`/`reducedMotion` prefs live in the **profile-prefs** provider,
+not the theme-driving `AppPreferences`. Two clean options:
+1. **Recommended:** add `highContrast`/`reducedMotion` to `AppPreferences`
+   (`app_preferences_provider.dart`) — the provider `app.dart` already watches —
+   add `KudlitTheme.highContrastLight/Dark` variants, and migrate the settings
+   toggles to write that provider. Then in `app.dart` pick the high-contrast
+   theme when the flag is set, and gate `.animate()` chains on
+   `MediaQuery.disableAnimationsOf(context) || prefs.reducedMotion`.
+2. Or have `app.dart` also watch the existing profile-prefs provider (note it may
+   be async/auth-gated → guard for theme flicker).
+

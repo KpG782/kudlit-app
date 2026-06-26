@@ -1,25 +1,24 @@
 import 'package:flutter/foundation.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// Central sink for uncaught errors.
 ///
-/// Today this logs to the console. Wire a real crash reporter here before a
-/// public launch (the app currently has zero crash visibility):
-///   1. add `sentry_flutter` (or `firebase_crashlytics`) to pubspec,
-///   2. initialize it in `main()` with a DSN from `--dart-define`,
-///   3. forward the calls below to `Sentry.captureException(...)`.
-/// Keeping every call site behind this class means that's a one-file change.
+/// Forwards to Sentry when a DSN was provided at build time
+/// (`--dart-define=SENTRY_DSN=...`, wired in `main()`); otherwise Sentry is
+/// uninitialized and `Sentry.captureException` is a safe no-op, so the app
+/// still runs without a DSN. Always logs to the console as a breadcrumb.
 abstract final class ErrorReporter {
   static void recordError(Object error, StackTrace? stack) {
     debugPrint('[ErrorReporter] $error');
     if (stack != null) {
       debugPrintStack(stackTrace: stack);
     }
-    // TODO(observability): Sentry.captureException(error, stackTrace: stack);
+    // No-op when Sentry was never initialized (no DSN).
+    Sentry.captureException(error, stackTrace: stack);
   }
 
   static void recordFlutterError(FlutterErrorDetails details) {
     debugPrint('[ErrorReporter] Flutter error: ${details.exceptionAsString()}');
-    // TODO(observability): Sentry.captureException(
-    //   details.exception, stackTrace: details.stack);
+    Sentry.captureException(details.exception, stackTrace: details.stack);
   }
 }

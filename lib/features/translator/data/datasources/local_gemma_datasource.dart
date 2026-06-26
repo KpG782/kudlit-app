@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
@@ -24,6 +26,13 @@ class LocalGemmaDatasource implements AiDatasource {
   InferenceModel? _activeModel;
   bool _activeModelHasVision = false;
   InferenceChat? _chat;
+
+  /// Serializes on-device inference. The native engine allows ONE session at a
+  /// time and `analyzeImage` tears the model down to enable vision, so
+  /// overlapping `generate` / `analyzeImage` calls (Butty chat, translate,
+  /// scanner eval, background memory extraction) must run one at a time or they
+  /// corrupt each other / spike memory. FIFO single-flight.
+  final _InferenceGate _inferenceGate = _InferenceGate();
 
   /// Last model we know is installed for this device. flutter_gemma's native
   /// "active model" is process-scoped and is lost on every app restart, while
@@ -196,6 +205,7 @@ class LocalGemmaDatasource implements AiDatasource {
     List<ChatMessage> history, {
     String? systemInstruction,
   }) async* {
+    final void Function() release = await _inferenceGate.acquire();
     try {
       debugPrint(
         '[Gemma][local] generate called | history=${history.length} | hasSystemInstruction=${systemInstruction != null}',
@@ -235,6 +245,8 @@ class LocalGemmaDatasource implements AiDatasource {
       debugPrint('[Gemma][local] generate error: $e');
       debugPrintStack(stackTrace: s, label: '[Gemma][local] stack');
       rethrow;
+    } finally {
+      release();
     }
   }
 
@@ -249,6 +261,7 @@ class LocalGemmaDatasource implements AiDatasource {
         'Image analysis is not supported by flutter_gemma on web yet.',
       );
     }
+    final void Function() release = await _inferenceGate.acquire();
     InferenceChat? imageChat;
     try {
       debugPrint(
@@ -302,6 +315,7 @@ class LocalGemmaDatasource implements AiDatasource {
       // _activeModel stays loaded (with vision) for reuse if analyzeImage
       // is called again; generate() works fine on a vision-enabled model.
       _chat = null;
+      release();
     }
   }
 
@@ -339,4 +353,22 @@ class LocalGemmaReadiness {
   final bool usable;
   final String detail;
   final String? modelName;
+}
+
+/// Minimal FIFO single-flight gate. `acquire()` resolves with a release
+/// callback once it is the caller's turn; the caller MUST invoke the returned
+/// callback (in a `finally`) when its work is done so the next waiter proceeds.
+class _InferenceGate {
+  Future<void> _tail = Future<void>.value();
+
+  Future<void Function()> acquire() {
+    final Completer<void> next = Completer<void>();
+    final Future<void> wait = _tail;
+    _tail = next.future;
+    return wait.then((_) {
+      return () {
+        if (!next.isCompleted) next.complete();
+      };
+    });
+  }
 }

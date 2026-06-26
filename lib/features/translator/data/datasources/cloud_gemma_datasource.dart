@@ -346,14 +346,21 @@ class CloudGemmaDatasource implements AiDatasource {
   /// the `Authorization` header, which the Edge Function verifies before
   /// calling Gemini with the server-held API key.
   Future<String> _invokeProxy(Map<String, dynamic> payload) async {
-    final FunctionResponse response = await _supabase!.functions.invoke(
-      _kProxyFunction,
-      body: <String, dynamic>{
-        'model': _kModel,
-        'stream': false,
-        'payload': payload,
-      },
-    );
+    final FunctionResponse response = await _supabase!.functions
+        .invoke(
+          _kProxyFunction,
+          body: <String, dynamic>{
+            'model': _kModel,
+            'stream': false,
+            'payload': payload,
+          },
+        )
+        .timeout(
+          const Duration(seconds: 30),
+          onTimeout: () => throw TimeoutException(
+            'The AI request timed out. Check your connection and try again.',
+          ),
+        );
 
     final int status = response.status;
     if (status < 200 || status >= 300) {

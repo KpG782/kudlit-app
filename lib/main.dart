@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:kudlit_ph/app/app.dart';
@@ -17,6 +18,17 @@ Future<void> main() async {
   runZonedGuarded<Future<void>>(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+
+      // Crash reporting. DSN is injected at build time
+      // (`--dart-define=SENTRY_DSN=...`); with no DSN, Sentry stays disabled
+      // and the app runs normally. Our explicit hooks below forward to it.
+      const String sentryDsn = String.fromEnvironment('SENTRY_DSN');
+      if (sentryDsn.isNotEmpty) {
+        await SentryFlutter.init((SentryFlutterOptions options) {
+          options.dsn = sentryDsn;
+          options.tracesSampleRate = 0.2;
+        });
+      }
 
       // Route Flutter framework + platform errors to the reporter.
       FlutterError.onError = (FlutterErrorDetails details) {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -96,8 +97,12 @@ class YoloModelCache implements YoloModelCacheStore {
     final File target = await _modelFile(modelId);
     final HttpClient client = HttpClient();
     try {
-      final HttpClientRequest request = await client.getUrl(Uri.parse(url));
-      final HttpClientResponse response = await request.close();
+      final HttpClientRequest request = await client
+          .getUrl(Uri.parse(url))
+          .timeout(const Duration(seconds: 30));
+      final HttpClientResponse response = await request.close().timeout(
+        const Duration(seconds: 30),
+      );
       if (response.statusCode != 200) {
         throw Exception(
           'YOLO model download failed — HTTP ${response.statusCode}',
@@ -106,7 +111,10 @@ class YoloModelCache implements YoloModelCacheStore {
       final int total = response.contentLength;
       int received = 0;
       final IOSink sink = target.openWrite();
-      await for (final List<int> chunk in response) {
+      // Idle/stall timeout: fail fast if no bytes arrive for 60s instead of
+      // hanging the first-run scanner setup forever on a flaky connection.
+      await for (final List<int> chunk
+          in response.timeout(const Duration(seconds: 60))) {
         sink.add(chunk);
         received += chunk.length;
         onProgress?.call(received, total);

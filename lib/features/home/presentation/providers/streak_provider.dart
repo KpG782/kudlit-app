@@ -1,9 +1,12 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:kudlit_ph/features/home/presentation/providers/profile_management_provider.dart';
 
 part 'streak_provider.g.dart';
+
+const String _kStreakCacheKey = 'cached_streak';
 
 /// Returns the user's current consecutive-day learning streak.
 ///
@@ -11,12 +14,17 @@ part 'streak_provider.g.dart';
 /// yesterday) on which the user completed at least one lesson. Derived
 /// purely from [learning_progress.completed_at] — no new table needed.
 ///
-/// Returns 0 for unauthenticated users or on any network error.
+/// The last successfully computed value is cached locally so the streak does
+/// NOT flicker to 0 during cold start (session not yet restored) or on a
+/// transient network error — a disappearing streak is worse than a stale one.
 @riverpod
 Future<int> streak(Ref ref) async {
   final SupabaseClient client = ref.watch(supabaseProvider);
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  final int cached = prefs.getInt(_kStreakCacheKey) ?? 0;
+
   final String? userId = client.auth.currentUser?.id;
-  if (userId == null) return 0;
+  if (userId == null) return cached;
 
   try {
     final List<Map<String, dynamic>> rows = await client
@@ -26,9 +34,12 @@ Future<int> streak(Ref ref) async {
         .eq('completed', true)
         .not('completed_at', 'is', null)
         .order('completed_at', ascending: false);
-    return _computeStreak(rows);
+    final int computed = _computeStreak(rows);
+    await prefs.setInt(_kStreakCacheKey, computed);
+    return computed;
   } catch (_) {
-    return 0;
+    // Network blip — keep showing the last known streak instead of 0.
+    return cached;
   }
 }
 

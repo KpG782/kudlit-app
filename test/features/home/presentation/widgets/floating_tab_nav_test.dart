@@ -4,31 +4,37 @@ import 'package:kudlit_ph/features/home/presentation/widgets/app_bottom_nav.dart
 import 'package:kudlit_ph/features/home/presentation/widgets/floating_tab_nav.dart';
 
 void main() {
-  Future<void> pumpNav(WidgetTester tester, {required Size surfaceSize}) async {
+  // The nav now docks as a full-width row at the bottom of the shell, so it
+  // needs a width-bounded parent (its items use `Expanded`). Mirror the real
+  // usage: a Column with the bar as its last child.
+  Future<void> pumpNav(
+    WidgetTester tester, {
+    required Size surfaceSize,
+    AppTab activeTab = AppTab.scan,
+    ValueChanged<AppTab>? onTabSelected,
+  }) async {
     await tester.binding.setSurfaceSize(surfaceSize);
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: Stack(
+          body: Column(
             children: <Widget>[
-              PositionedDirectional(
-                end: 14,
-                bottom: 12,
-                child: FloatingTabNav(
-                  activeTab: AppTab.scan,
-                  onTabSelected: (_) {},
-                ),
+              const Expanded(child: SizedBox.expand()),
+              FloatingTabNav(
+                activeTab: activeTab,
+                onTabSelected: onTabSelected ?? (_) {},
               ),
             ],
           ),
         ),
       ),
     );
+    await tester.pumpAndSettle();
   }
 
-  testWidgets('collapsed floating nav stays within phone viewport', (
+  testWidgets('docked floating nav stays within phone viewport', (
     WidgetTester tester,
   ) async {
     await pumpNav(tester, surfaceSize: const Size(320, 593));
@@ -41,13 +47,10 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('expanded floating nav fits compact landscape width', (
+  testWidgets('docked floating nav fits compact landscape width', (
     WidgetTester tester,
   ) async {
     await pumpNav(tester, surfaceSize: const Size(593, 360));
-
-    await tester.tap(find.byType(FloatingTabNav));
-    await tester.pumpAndSettle();
 
     final Rect navRect = tester.getRect(find.byType(FloatingTabNav));
 
@@ -57,21 +60,14 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('floating nav exposes accessible tab labels', (
+  testWidgets('floating nav exposes all tab labels at once (1-tap switch)', (
     WidgetTester tester,
   ) async {
     final SemanticsHandle semantics = tester.ensureSemantics();
 
     await pumpNav(tester, surfaceSize: const Size(320, 593));
 
-    expect(
-      find.bySemanticsLabel('Open home tab navigation, current tab Scan'),
-      findsOneWidget,
-    );
-
-    await tester.tap(find.byType(FloatingTabNav));
-    await tester.pumpAndSettle();
-
+    // All four destinations are visible immediately — no expand step.
     for (final String label in <String>[
       'Scan tab',
       'Translate tab',
@@ -91,13 +87,27 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('expanded floating nav keeps comfortable tap targets', (
+  testWidgets('tapping a destination selects it in a single tap', (
+    WidgetTester tester,
+  ) async {
+    AppTab? selected;
+    await pumpNav(
+      tester,
+      surfaceSize: const Size(320, 593),
+      onTabSelected: (AppTab tab) => selected = tab,
+    );
+
+    await tester.tap(find.byTooltip('Learn'));
+    await tester.pump();
+
+    expect(selected, AppTab.learn);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('floating nav keeps comfortable tap targets', (
     WidgetTester tester,
   ) async {
     await pumpNav(tester, surfaceSize: const Size(320, 593));
-
-    await tester.tap(find.byType(FloatingTabNav));
-    await tester.pumpAndSettle();
 
     for (final String label in <String>[
       'Scan',

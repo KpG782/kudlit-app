@@ -117,10 +117,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final EdgeInsets safePadding = MediaQuery.paddingOf(context);
-    final double navBottom = safePadding.bottom + 56;
-    final double navRight = safePadding.right + 18;
-
     // Android Back returns to the default (Scan) tab instead of exiting the
     // app. Only when already on Scan does Back pop the route (exit).
     return PopScope(
@@ -134,17 +130,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           children: <Widget>[
             AppHeader(showTranslateControls: _activeTab == AppTab.translate),
             Expanded(
+              // The docked FloatingTabNav below owns the bottom system inset
+              // (it wraps itself in a SafeArea), so tab content stops reserving
+              // it — each screen sits flush above the bar instead of leaving a
+              // double gap.
               child: MediaQuery.removePadding(
                 context: context,
                 removeTop: true,
+                removeBottom: true,
                 child: _HomeBody(
                   pageController: _pageController,
-                  activeTab: _activeTab,
                   onTabSelected: _onTabSelected,
-                  navBottom: navBottom,
-                  navRight: navRight,
                 ),
               ),
+            ),
+            FloatingTabNav(
+              activeTab: _activeTab,
+              onTabSelected: _onTabSelected,
             ),
           ],
         ),
@@ -164,43 +166,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 
 class _HomeBody extends StatelessWidget {
-  const _HomeBody({
-    required this.pageController,
-    required this.activeTab,
-    required this.onTabSelected,
-    required this.navBottom,
-    required this.navRight,
-  });
+  const _HomeBody({required this.pageController, required this.onTabSelected});
 
   final PageController pageController;
-  final AppTab activeTab;
   final ValueChanged<AppTab> onTabSelected;
-  final double navBottom;
-  final double navRight;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
+    return PageView(
+      controller: pageController,
+      physics: const NeverScrollableScrollPhysics(),
       children: <Widget>[
-        PageView(
-          controller: pageController,
-          physics: const NeverScrollableScrollPhysics(),
-          children: <Widget>[
-            const ScanTab(),
-            const TranslateScreen(),
-            LearnTab(onSwitchToButty: () => onTabSelected(AppTab.butty)),
-            const ButtyChatScreen(),
-          ],
-        ),
-        Positioned(
-          right: navRight,
-          bottom: navBottom,
-          child: FloatingTabNav(
-            activeTab: activeTab,
-            onTabSelected: onTabSelected,
-          ),
-        ),
+        const ScanTab(),
+        const TranslateScreen(),
+        LearnTab(onSwitchToButty: () => onTabSelected(AppTab.butty)),
+        const ButtyChatScreen(),
       ],
     );
   }

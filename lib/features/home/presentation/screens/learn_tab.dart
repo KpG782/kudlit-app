@@ -16,8 +16,10 @@ class LearnTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double bottomPad =
-        MediaQuery.paddingOf(context).bottom + kFloatingNavClearance;
+    // The tab bar docks in its own row below this screen (no longer an
+    // overlay), so the list only needs a small breathing gap — the docked
+    // bar's own SafeArea handles the system inset.
+    const double bottomPad = kFloatingNavClearance;
 
     return DecoratedBox(
       decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface),

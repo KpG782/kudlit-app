@@ -69,11 +69,14 @@ class _TranslateScreenState extends ConsumerState<TranslateScreen> {
         MediaQuery.viewInsetsOf(context).bottom > 0 || rawKeyboardInset > 0;
     final bool compactLandscape =
         screenSize.height < 500 && screenSize.width > screenSize.height;
+    // The tab bar now docks in its own row below this screen (it is no longer
+    // an overlay), so we only add a small breathing gap above it — no safe-area
+    // reservation, which the docked bar's own SafeArea already provides.
     final double navClearance = keyboardOpen
         ? 0
         : compactLandscape
-        ? 10
-        : kFloatingNavClearance - 32;
+        ? 6
+        : kFloatingNavClearance;
     Widget textModePanel({required bool compactLayout}) {
       return TranslateTextModePanel(
         state: textState,
@@ -125,8 +128,7 @@ class _TranslateScreenState extends ConsumerState<TranslateScreen> {
           builder: (BuildContext context, BoxConstraints constraints) {
             final bool portraitKeyboardOpen =
                 keyboardOpen && screenSize.height >= screenSize.width;
-            final bool textMode =
-                pageState.mode == TranslateWorkspaceMode.text;
+            final bool textMode = pageState.mode == TranslateWorkspaceMode.text;
             // Eager (non-async) preserve: in portrait text mode the keyboard
             // can only be open because the text field is focused, so lock the
             // layout immediately instead of waiting for the focus-listener
@@ -175,9 +177,7 @@ class _TranslateScreenState extends ConsumerState<TranslateScreen> {
                     TranslateWorkspaceMode.sketchpad => sketchpadPanel(),
                   },
                 ),
-                SizedBox(
-                  height: MediaQuery.paddingOf(context).bottom + navClearance,
-                ),
+                SizedBox(height: navClearance),
               ],
             );
           },

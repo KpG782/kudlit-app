@@ -1,18 +1,27 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-/// Vertical space (px) reserved by scrollable screens so the floating nav does
-/// not cover bottom content. Excludes the device's safe-area inset.
-const double kFloatingNavClearance = 112.0;
+/// Bottom breathing room that scrollable tab screens add so their last item is
+/// not flush against the docked nav bar. (The bar now docks in its own row, so
+/// screens no longer need to reserve its full height.)
+const double kFloatingNavClearance = 16.0;
 
-/// The three primary app tabs.
+/// The four primary app tabs.
 enum AppTab { scan, translate, learn, butty }
 
-/// Dark floating pill at the bottom-right corner.
-/// Tapping it expands to reveal all three tabs; tapping again collapses.
-/// While expanded, tapping any tab item selects it and collapses the nav.
-class FloatingTabNav extends StatefulWidget {
+const Map<AppTab, ({IconData icon, String label})> _kTabs =
+    <AppTab, ({IconData icon, String label})>{
+      AppTab.scan: (icon: Icons.qr_code_scanner, label: 'Scan'),
+      AppTab.translate: (icon: Icons.g_translate, label: 'Translate'),
+      AppTab.learn: (icon: Icons.auto_stories_rounded, label: 'Learn'),
+      AppTab.butty: (icon: Icons.chat_bubble_outline_rounded, label: 'Butty'),
+    };
+
+/// Always-expanded, blurred-glass floating pill docked at the bottom. All four
+/// destinations are always visible and switch in a single tap.
+class FloatingTabNav extends StatelessWidget {
   const FloatingTabNav({
     required this.activeTab,
     required this.onTabSelected,
@@ -23,249 +32,77 @@ class FloatingTabNav extends StatefulWidget {
   final ValueChanged<AppTab> onTabSelected;
 
   @override
-  State<FloatingTabNav> createState() => _FloatingTabNavState();
-}
-
-class _FloatingTabNavState extends State<FloatingTabNav> {
-  bool _expanded = false;
-
-  void _toggle() => setState(() => _expanded = !_expanded);
-
-  void _select(AppTab tab) {
-    widget.onTabSelected(tab);
-    setState(() => _expanded = false);
-  }
-
-  String get _activeLabel => switch (widget.activeTab) {
-    AppTab.scan => 'Scan',
-    AppTab.translate => 'Translate',
-    AppTab.learn => 'Learn',
-    AppTab.butty => 'Butty',
-  };
-
-  @override
   Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery.sizeOf(context).width;
-    final double pillWidth = (screenWidth * 0.88).clamp(280.0, 360.0);
-
-    return TapRegion(
-      onTapOutside: (_) {
-        if (_expanded) setState(() => _expanded = false);
-      },
-      child: Semantics(
-        container: true,
-        explicitChildNodes: _expanded,
-        button: !_expanded,
-        label: _expanded
-            ? 'Home tab navigation expanded'
-            : 'Open home tab navigation, current tab $_activeLabel',
-        hint: _expanded
-            ? 'Choose a tab'
-            : 'Shows Scan, Translate, Learn, and Butty',
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
-          child: InkWell(
-            onTap: _expanded ? null : _toggle,
-            borderRadius: BorderRadius.circular(999),
-            child: _NavPillSurface(
-              expanded: _expanded,
-              pillWidth: pillWidth,
-              activeTab: widget.activeTab,
-              onSelect: _select,
-            ),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460),
+            child: _NavPill(activeTab: activeTab, onTabSelected: onTabSelected),
           ),
         ),
       ),
-    );
-  }
-}
-
-// ── Pill surface (blurred glass container with collapsed/expanded slots) ─────
-
-class _NavPillSurface extends StatelessWidget {
-  const _NavPillSurface({
-    required this.expanded,
-    required this.pillWidth,
-    required this.activeTab,
-    required this.onSelect,
-  });
-
-  final bool expanded;
-  final double pillWidth;
-  final AppTab activeTab;
-  final ValueChanged<AppTab> onSelect;
-
-  static const double _collapsedSize = 64.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme cs = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x55000000),
-            blurRadius: 36,
-            spreadRadius: -4,
-            offset: Offset(0, 12),
-          ),
-          BoxShadow(
-            color: Color(0x22000000),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(999),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOutCubic,
-            width: expanded ? pillWidth : _collapsedSize,
-            height: _collapsedSize,
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: cs.outline, width: 1.0),
-            ),
-            child: _NavPillContents(
-              expanded: expanded,
-              activeTab: activeTab,
-              onSelect: onSelect,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Stacked collapsed/expanded contents with crossfade ──────────────────────
-
-class _NavPillContents extends StatelessWidget {
-  const _NavPillContents({
-    required this.expanded,
-    required this.activeTab,
-    required this.onSelect,
-  });
-
-  final bool expanded;
-  final AppTab activeTab;
-  final ValueChanged<AppTab> onSelect;
-
-  static const Duration _fade = Duration(milliseconds: 180);
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: <Widget>[
-        IgnorePointer(
-          ignoring: expanded,
-          child: AnimatedOpacity(
-            opacity: expanded ? 0.0 : 1.0,
-            duration: _fade,
-            curve: Curves.easeOut,
-            child: _CollapsedPill(activeTab: activeTab),
-          ),
-        ),
-        IgnorePointer(
-          ignoring: !expanded,
-          child: AnimatedOpacity(
-            opacity: expanded ? 1.0 : 0.0,
-            duration: _fade,
-            curve: Curves.easeOut,
-            child: _ExpandedItems(activeTab: activeTab, onSelect: onSelect),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Collapsed state ───────────────────────────────────────────────────────────
-
-class _CollapsedPill extends StatelessWidget {
-  const _CollapsedPill({required this.activeTab});
-
-  final AppTab activeTab;
-
-  static const Map<AppTab, IconData> _icons = <AppTab, IconData>{
-    AppTab.scan: Icons.qr_code_scanner,
-    AppTab.translate: Icons.g_translate,
-    AppTab.learn: Icons.auto_stories_rounded,
-    AppTab.butty: Icons.chat_bubble_outline_rounded,
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Icon(
-        _icons[activeTab]!,
-        size: 22,
-        color: Theme.of(context).colorScheme.onSurface,
-      ),
-    );
-  }
-}
-
-// ── Expanded state ────────────────────────────────────────────────────────────
-
-class _ExpandedItems extends StatelessWidget {
-  const _ExpandedItems({required this.activeTab, required this.onSelect});
-
-  final AppTab activeTab;
-  final ValueChanged<AppTab> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.max,
-      children: <Widget>[
-        Expanded(
-          child: _NavPill(
-            icon: Icons.qr_code_scanner,
-            label: 'Scan',
-            active: activeTab == AppTab.scan,
-            onTap: () => onSelect(AppTab.scan),
-          ),
-        ),
-        Expanded(
-          child: _NavPill(
-            icon: Icons.g_translate,
-            label: 'Translate',
-            active: activeTab == AppTab.translate,
-            onTap: () => onSelect(AppTab.translate),
-          ),
-        ),
-        Expanded(
-          child: _NavPill(
-            icon: Icons.auto_stories_rounded,
-            label: 'Learn',
-            active: activeTab == AppTab.learn,
-            onTap: () => onSelect(AppTab.learn),
-          ),
-        ),
-        Expanded(
-          child: _NavPill(
-            icon: Icons.chat_bubble_outline_rounded,
-            label: 'Butty',
-            active: activeTab == AppTab.butty,
-            onTap: () => onSelect(AppTab.butty),
-          ),
-        ),
-      ],
     );
   }
 }
 
 class _NavPill extends StatelessWidget {
-  const _NavPill({
+  const _NavPill({required this.activeTab, required this.onTabSelected});
+
+  final AppTab activeTab;
+  final ValueChanged<AppTab> onTabSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.all(Radius.circular(999)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Color(0x55000000),
+            blurRadius: 30,
+            spreadRadius: -6,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.all(Radius.circular(999)),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Container(
+            height: 64,
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest.withValues(alpha: 0.92),
+              borderRadius: const BorderRadius.all(Radius.circular(999)),
+              border: Border.all(color: cs.outline),
+            ),
+            child: Row(
+              children: <Widget>[
+                for (final AppTab tab in AppTab.values)
+                  Expanded(
+                    child: _NavItem(
+                      icon: _kTabs[tab]!.icon,
+                      label: _kTabs[tab]!.label,
+                      active: tab == activeTab,
+                      onTap: () => onTabSelected(tab),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  const _NavItem({
     required this.icon,
     required this.label,
     required this.active,
@@ -280,8 +117,9 @@ class _NavPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme cs = Theme.of(context).colorScheme;
-    final Color activeFg = cs.onPrimary;
-    final Color inactiveFg = cs.onSurface.withAlpha(210);
+    final Color fg = active ? cs.onPrimary : cs.onSurface.withAlpha(210);
+    final bool reduceMotion = MediaQuery.disableAnimationsOf(context);
+
     return Semantics(
       container: true,
       button: true,
@@ -292,24 +130,30 @@ class _NavPill extends StatelessWidget {
         excludeFromSemantics: true,
         child: Material(
           color: Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: const BorderRadius.all(Radius.circular(999)),
           child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(999),
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 54),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            onTap: () {
+              HapticFeedback.selectionClick();
+              onTap();
+            },
+            borderRadius: const BorderRadius.all(Radius.circular(999)),
+            child: AnimatedContainer(
+              duration: reduceMotion
+                  ? Duration.zero
+                  : const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              constraints: const BoxConstraints(minHeight: 52),
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: active ? cs.primary : Colors.transparent,
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: const BorderRadius.all(Radius.circular(999)),
               ),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Icon(icon, size: 18, color: active ? activeFg : inactiveFg),
+                    Icon(icon, size: 20, color: fg),
                     const SizedBox(height: 3),
                     Text(
                       label,
@@ -317,9 +161,9 @@ class _NavPill extends StatelessWidget {
                       softWrap: false,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 10.5,
+                        fontSize: 11,
                         fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-                        color: active ? activeFg : inactiveFg,
+                        color: fg,
                         letterSpacing: 0.2,
                       ),
                     ),

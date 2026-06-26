@@ -1,0 +1,67 @@
+name: Build sideloadable APK (debug)
+
+# One-click APK you can install on your phone for testing.
+# Run it from the GitHub "Actions" tab → "Build sideloadable APK (debug)" →
+# "Run workflow", then download the `kudlit-debug-apk` artifact and open it on
+# your Android phone (enable "Install unknown apps" for your browser/Files app).
+#
+# GitHub-hosted runners include the Android SDK, so this builds where this
+# sandbox can't (the Android SDK mirror is blocked here).
+#
+# Requires repo secrets so the app can reach its backend at runtime:
+#   SUPABASE_URL, SUPABASE_ANON_KEY  (you already use these in deploy-pages.yml)
+#   SENTRY_DSN (optional)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    name: Build debug APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Write runtime env (.env) — client-safe values
+        run: |
+          {
+            printf 'SUPABASE_URL=%s\n' "$SUPABASE_URL"
+            printf 'SUPABASE_ANON_KEY=%s\n' "$SUPABASE_ANON_KEY"
+          } > .env
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build debug APK (universal, sideloadable)
+        run: flutter build apk --debug --dart-define=SENTRY_DSN="$SENTRY_DSN"
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kudlit-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error

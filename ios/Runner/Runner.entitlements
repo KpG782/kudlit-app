@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Sign in with Apple is required (App Store Guideline 4.8) because the app
+	  offers Google sign-in. Wire this file in Xcode:
+	    Runner target → Build Settings → "Code Signing Entitlements" =
+	    Runner/Runner.entitlements, then add the "Sign in with Apple" capability.
+	  This entitlement is intentionally staged here; the Google/Apple auth work
+	  is deferred per the deployment plan.
+	-->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
+</dict>
+</plist>

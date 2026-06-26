@@ -121,24 +121,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final double navBottom = safePadding.bottom + 56;
     final double navRight = safePadding.right + 18;
 
-    return Scaffold(
-      body: Column(
-        children: <Widget>[
-          AppHeader(showTranslateControls: _activeTab == AppTab.translate),
-          Expanded(
-            child: MediaQuery.removePadding(
-              context: context,
-              removeTop: true,
-              child: _HomeBody(
-                pageController: _pageController,
-                activeTab: _activeTab,
-                onTabSelected: _onTabSelected,
-                navBottom: navBottom,
-                navRight: navRight,
+    // Android Back returns to the default (Scan) tab instead of exiting the
+    // app. Only when already on Scan does Back pop the route (exit).
+    return PopScope(
+      canPop: _activeTab == AppTab.scan,
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        if (didPop) return;
+        _onTabSelected(AppTab.scan);
+      },
+      child: Scaffold(
+        body: Column(
+          children: <Widget>[
+            AppHeader(showTranslateControls: _activeTab == AppTab.translate),
+            Expanded(
+              child: MediaQuery.removePadding(
+                context: context,
+                removeTop: true,
+                child: _HomeBody(
+                  pageController: _pageController,
+                  activeTab: _activeTab,
+                  onTabSelected: _onTabSelected,
+                  navBottom: navBottom,
+                  navRight: navRight,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

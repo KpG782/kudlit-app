@@ -114,6 +114,18 @@ class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, Unit>> deleteAccount() async {
+    try {
+      await _datasource.deleteAccount();
+      return right(unit);
+    } on ServerException catch (e) {
+      return left(_mapServerExceptionToFailure(e));
+    } on Exception {
+      return left(const Failure.network(message: 'Unexpected network error.'));
+    }
+  }
+
   Failure _mapServerExceptionToFailure(ServerException e) {
     final String msg = e.message.toLowerCase();
     if (msg.contains('invalid login credentials') ||

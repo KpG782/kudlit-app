@@ -5,9 +5,9 @@ import 'settings_card.dart';
 import 'settings_section_label.dart';
 
 class DangerSection extends StatelessWidget {
-  const DangerSection({super.key, required this.onActionTap});
+  const DangerSection({super.key, required this.onDeleteAccountTap});
 
-  final void Function(String message) onActionTap;
+  final Future<void> Function() onDeleteAccountTap;
 
   @override
   Widget build(BuildContext context) {
@@ -22,9 +22,7 @@ class DangerSection extends StatelessWidget {
               title: 'Delete account',
               subtitle: 'Permanently remove your data and account.',
               isDestructive: true,
-              isSoon: true,
-              onTap: () =>
-                  onActionTap('Account deletion flow will be available soon.'),
+              onTap: () => onDeleteAccountTap(),
             ),
           ],
         ),

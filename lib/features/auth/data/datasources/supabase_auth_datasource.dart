@@ -31,6 +31,8 @@ abstract interface class SupabaseAuthDatasource {
   Future<void> signOut();
 
   Future<void> resetPassword({required String email});
+
+  Future<void> deleteAccount();
 }
 
 class SupabaseAuthDatasourceImpl implements SupabaseAuthDatasource {
@@ -181,6 +183,20 @@ class SupabaseAuthDatasourceImpl implements SupabaseAuthDatasource {
       await _client.auth.resetPasswordForEmail(email, redirectTo: redirectTo);
     } on AuthException catch (e) {
       throw ServerException(message: e.message);
+    }
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    try {
+      // The `delete-account` Edge Function verifies the user JWT (forwarded
+      // automatically) and deletes the auth user + cascaded data server-side.
+      await _client.functions.invoke('delete-account');
+      await _client.auth.signOut();
+    } on AuthException catch (e) {
+      throw ServerException(message: e.message);
+    } on Exception catch (e) {
+      throw ServerException(message: e.toString());
     }
   }
 }

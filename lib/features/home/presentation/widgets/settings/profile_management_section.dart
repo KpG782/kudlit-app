@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import 'package:kudlit_ph/app/constants.dart';
 import 'package:kudlit_ph/core/error/failures.dart';
+import 'package:kudlit_ph/features/auth/presentation/providers/auth_notifier.dart';
 import 'package:kudlit_ph/features/home/domain/entities/profile_preferences.dart';
 import 'package:kudlit_ph/features/home/domain/entities/profile_summary.dart';
 import 'package:kudlit_ph/features/home/presentation/providers/profile_management_provider.dart';
@@ -162,7 +163,7 @@ class _ProfileManagementSectionState
         description: 'Run a safe and confirmed account deletion process.',
         primaryActionId: 'delete-account',
         primaryActionLabel: 'Delete account',
-        primaryActionMessage: 'Account deletion flow will be available soon.',
+        primaryActionMessage: 'delete-account',
         secondaryActionId: 'account-deletion-learn-more',
         secondaryActionLabel: 'Learn more',
         secondaryActionMessage:
@@ -192,6 +193,10 @@ class _ProfileManagementSectionState
       context.push(AppConstants.routeButtyData);
       return;
     }
+    if (message == 'delete-account') {
+      await _confirmAndDeleteAccount();
+      return;
+    }
 
     if (_loadingActions.contains(actionId)) return;
     setState(() => _loadingActions.add(actionId));
@@ -199,6 +204,53 @@ class _ProfileManagementSectionState
     if (!mounted) return;
     widget.onActionTap(message);
     setState(() => _loadingActions.remove(actionId));
+  }
+
+  Future<void> _confirmAndDeleteAccount() async {
+    final bool confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (BuildContext dialogContext) {
+            return AlertDialog(
+              title: const Text('Delete account?'),
+              content: const Text(
+                'This permanently deletes your account and all your data — '
+                'profile, history, chats, and saved progress. This cannot be '
+                'undone.',
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: Theme.of(dialogContext).colorScheme.error,
+                  ),
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text('Delete'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (!confirmed || !mounted) return;
+    setState(() => _loadingActions.add('delete-account'));
+    final result = await ref
+        .read(authNotifierProvider.notifier)
+        .deleteAccount();
+    if (!mounted) return;
+    setState(() => _loadingActions.remove('delete-account'));
+    result.fold(
+      (_) => ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not delete your account. Please try again.'),
+        ),
+      ),
+      (_) => context.go(AppConstants.routeLogin),
+    );
   }
 
   void _startInlineNameEdit() {

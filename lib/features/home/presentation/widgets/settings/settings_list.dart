@@ -20,6 +20,7 @@ class SettingsList extends StatelessWidget {
     required this.bottomPadding,
     required this.onActionTap,
     required this.onSignOutTap,
+    required this.onDeleteAccountTap,
   });
 
   final AuthUser? user;
@@ -27,6 +28,7 @@ class SettingsList extends StatelessWidget {
   final double bottomPadding;
   final void Function(String message) onActionTap;
   final Future<void> Function() onSignOutTap;
+  final Future<void> Function() onDeleteAccountTap;
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +74,7 @@ class SettingsList extends StatelessWidget {
                 ],
                 if (u != null) ...<Widget>[
                   const SizedBox(height: 14),
-                  DangerSection(onActionTap: onActionTap),
+                  DangerSection(onDeleteAccountTap: onDeleteAccountTap),
                 ],
               ],
             ),

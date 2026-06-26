@@ -50,6 +50,12 @@ app.*.map.json
 !.env.example
 web/client_secret_*.json
 
+# Android release signing (never commit real keys)
+android/key.properties
+*.jks
+*.keystore
+!android/key.properties.example
+
 # Node (not part of this project)
 node_modules/
 package.json

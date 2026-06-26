@@ -1,0 +1,13 @@
+# Android release signing — copy to `android/key.properties` and fill in.
+# DO NOT COMMIT the real key.properties or the .jks/.keystore file (both are git-ignored).
+#
+# Create an upload keystore once:
+#   keytool -genkey -v -keystore ~/kudlit-upload-keystore.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias kudlit-upload
+#
+# Then enroll in Play App Signing when you create the Play Console app.
+storePassword=your-keystore-password
+keyPassword=your-key-password
+keyAlias=kudlit-upload
+# Absolute path or path relative to the android/app directory:
+storeFile=/absolute/path/to/kudlit-upload-keystore.jks

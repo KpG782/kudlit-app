@@ -31,18 +31,17 @@ jobs:
           cache: true
 
       - name: Write runtime env asset
+        # Only the client-safe Supabase URL + anon key (RLS-protected) are
+        # written. GEMINI_API_KEY stays server-side in the gemini-proxy Edge
+        # Function; HUGGINGFACE_TOKEN must never be bundled into the web build.
         run: |
           {
             printf 'SUPABASE_URL=%s\n' "$SUPABASE_URL"
             printf 'SUPABASE_ANON_KEY=%s\n' "$SUPABASE_ANON_KEY"
-            printf 'GEMINI_API_KEY=%s\n' "$GEMINI_API_KEY"
-            printf 'HUGGINGFACE_TOKEN=%s\n' "$HUGGINGFACE_TOKEN"
           } > .env
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
 
       - name: Install dependencies
         run: flutter pub get
@@ -54,8 +53,6 @@ jobs:
           APP_BASE_PATH: /kudlit-app/app/
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

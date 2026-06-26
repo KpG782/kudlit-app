@@ -1,4 +1,4 @@
-package com.example.kudlit_ph
+package app.kudlit
 
 import io.flutter.embedding.android.FlutterActivity
 

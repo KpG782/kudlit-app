@@ -36,6 +36,7 @@ class SettingsScreen extends ConsumerWidget {
                     context.go(AppConstants.routeLogin);
                   }
                 },
+                onDeleteAccountTap: () => _confirmAndDeleteAccount(context, ref),
               ),
             ),
           ],
@@ -47,4 +48,47 @@ class SettingsScreen extends ConsumerWidget {
 
 void _showActionSnackBar(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+}
+
+Future<void> _confirmAndDeleteAccount(BuildContext context, WidgetRef ref) async {
+  final bool confirmed =
+      await showDialog<bool>(
+        context: context,
+        builder: (BuildContext dialogContext) {
+          return AlertDialog(
+            title: const Text('Delete account?'),
+            content: const Text(
+              'This permanently deletes your account and all your data — '
+              'profile, history, chats, and saved progress. This cannot be '
+              'undone.',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(dialogContext).colorScheme.error,
+                ),
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Delete'),
+              ),
+            ],
+          );
+        },
+      ) ??
+      false;
+
+  if (!confirmed || !context.mounted) return;
+
+  final result = await ref.read(authNotifierProvider.notifier).deleteAccount();
+  if (!context.mounted) return;
+  result.fold(
+    (_) => _showActionSnackBar(
+      context,
+      'Could not delete your account. Please try again.',
+    ),
+    (_) => context.go(AppConstants.routeLogin),
+  );
 }

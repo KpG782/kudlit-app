@@ -77,6 +77,13 @@ dependencies:
   flutter_animate: ^4.5.2
   share_plus: ^13.1.0
 
+  # Audit follow-ups (run `flutter pub get` after pulling):
+  flutter_tts: ^4.2.0              # glyph + translation pronunciation
+  in_app_review: ^2.0.10          # store review prompt at delight moments
+  flutter_secure_storage: ^9.2.4  # Keychain/Keystore for the Supabase session
+  connectivity_plus: ^6.1.0       # offline-aware network resilience
+  cached_network_image: ^3.4.1    # avatar/glyph image caching
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

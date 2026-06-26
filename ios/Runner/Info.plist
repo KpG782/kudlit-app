@@ -49,6 +49,9 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Permission for the Baybayin camera scanner -->
+	<key>NSCameraUsageDescription</key>
+	<string>Kudlit uses the camera to scan and recognize Baybayin characters.</string>
 	<!-- Permission for image_picker to access the gallery -->
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Kudlit needs access to your photo library to choose scanner images and update your profile avatar.</string>
@@ -59,7 +62,7 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>com.example.kudlit_ph</string>
+			<string>app.kudlit</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>kudlit</string>

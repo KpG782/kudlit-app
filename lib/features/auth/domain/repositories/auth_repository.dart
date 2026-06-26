@@ -30,4 +30,8 @@ abstract interface class AuthRepository {
   Future<Either<Failure, Unit>> signOut();
 
   Future<Either<Failure, Unit>> resetPassword({required String email});
+
+  /// Permanently deletes the current user's account and all associated data,
+  /// then signs out locally. Required by App Store 5.1.1(v) and Play policy.
+  Future<Either<Failure, Unit>> deleteAccount();
 }

@@ -9,6 +9,7 @@ import 'package:kudlit_ph/core/usecases/usecase.dart';
 import 'package:kudlit_ph/features/auth/domain/entities/auth_user.dart';
 import 'package:kudlit_ph/features/auth/domain/entities/sign_up_status.dart';
 import 'package:kudlit_ph/features/auth/domain/repositories/auth_repository.dart';
+import 'package:kudlit_ph/features/auth/domain/usecases/delete_account.dart';
 import 'package:kudlit_ph/features/auth/domain/usecases/reset_password.dart';
 import 'package:kudlit_ph/features/auth/domain/usecases/sign_in_with_email.dart';
 import 'package:kudlit_ph/features/auth/domain/usecases/sign_in_with_google.dart';
@@ -100,5 +101,19 @@ class AuthNotifier extends _$AuthNotifier {
   Future<Either<Failure, Unit>> resetPassword({required String email}) async {
     final ResetPassword useCase = ref.read(resetPasswordProvider);
     return useCase(ResetPasswordParams(email: email));
+  }
+
+  Future<Either<Failure, Unit>> deleteAccount() async {
+    state = const AsyncLoading<AuthUser?>();
+    final AuthRepository repository = ref.read(authRepositoryProvider);
+    final DeleteAccount useCase = DeleteAccount(repository);
+    final Either<Failure, Unit> result = await useCase(const NoParams());
+    // On success the auth stream emits null and the listener updates state.
+    // On failure, restore the current user so the UI leaves the loading state.
+    result.fold(
+      (Failure _) => state = AsyncData(repository.currentUser),
+      (Unit _) {},
+    );
+    return result;
   }
 }

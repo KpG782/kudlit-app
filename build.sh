@@ -17,21 +17,20 @@ if [[ "$APP_BASE_PATH" != /* || "$APP_BASE_PATH" != */ ]]; then
   exit 1
 fi
 
-if [ -n "${SUPABASE_URL:-}" ] || [ -n "${SUPABASE_ANON_KEY:-}" ] || [ -n "${GEMINI_API_KEY:-}" ] || [ -n "${HUGGINGFACE_TOKEN:-}" ]; then
+if [ -n "${SUPABASE_URL:-}" ] || [ -n "${SUPABASE_ANON_KEY:-}" ]; then
   # Write .env from CI environment variables so flutter_dotenv can load it.
-  # All variables must be set as secrets in the CI environment.
+  # Only the Supabase URL + anon key are client-safe (protected by RLS).
+  # GEMINI_API_KEY lives only in the gemini-proxy Edge Function and must NOT be
+  # bundled. HUGGINGFACE_TOKEN must NOT ship in the client either — gated model
+  # downloads should use a server-minted signed URL or a public bucket.
   cat > .env <<EOF
 SUPABASE_URL=${SUPABASE_URL}
 SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-GEMINI_API_KEY=${GEMINI_API_KEY}
-HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN:-}
 EOF
 elif [ ! -f .env ]; then
   cat > .env <<EOF
 SUPABASE_URL=
 SUPABASE_ANON_KEY=
-GEMINI_API_KEY=
-HUGGINGFACE_TOKEN=
 EOF
 fi
 

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fpdart/fpdart.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -238,7 +239,7 @@ class _ProfileManagementSectionState
 
     if (!confirmed || !mounted) return;
     setState(() => _loadingActions.add('delete-account'));
-    final result = await ref
+    final Either<Failure, Unit> result = await ref
         .read(authNotifierProvider.notifier)
         .deleteAccount();
     if (!mounted) return;

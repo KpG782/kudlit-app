@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fpdart/fpdart.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:kudlit_ph/app/constants.dart';
+import 'package:kudlit_ph/core/error/failures.dart';
 import 'package:kudlit_ph/features/auth/domain/entities/auth_user.dart';
 import 'package:kudlit_ph/features/auth/presentation/providers/auth_notifier.dart';
 import 'package:kudlit_ph/features/home/presentation/widgets/settings/settings_header.dart';
@@ -82,7 +84,9 @@ Future<void> _confirmAndDeleteAccount(BuildContext context, WidgetRef ref) async
 
   if (!confirmed || !context.mounted) return;
 
-  final result = await ref.read(authNotifierProvider.notifier).deleteAccount();
+  final Either<Failure, Unit> result = await ref
+      .read(authNotifierProvider.notifier)
+      .deleteAccount();
   if (!context.mounted) return;
   result.fold(
     (_) => _showActionSnackBar(

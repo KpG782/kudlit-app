@@ -95,6 +95,18 @@ dev_dependencies:
   freezed: ^3.2.5
   json_serializable: ^6.9.4
   mocktail: ^1.0.4
+  flutter_launcher_icons: ^0.14.4
+
+# Adaptive launcher icon generation. Run: dart run flutter_launcher_icons
+# (For the best Android result, replace adaptive_icon_foreground with a padded,
+# transparent-background version of the Kudlit mark.)
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png"
+  remove_alpha_ios: true
+  adaptive_icon_background: "#0E1425"
+  adaptive_icon_foreground: "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

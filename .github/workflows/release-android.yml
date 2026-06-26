@@ -1,0 +1,114 @@
+name: Release Android (signed AAB)
+
+# Builds a signed, obfuscated Android App Bundle for Play submission.
+# Triggers on a version tag (e.g. v1.1.0) or manually.
+#
+# Required repository secrets:
+#   ANDROID_KEYSTORE_BASE64   - base64 of your upload keystore (.jks)
+#                               `base64 -w0 upload-keystore.jks`
+#   ANDROID_KEYSTORE_PASSWORD - keystore store password
+#   ANDROID_KEY_PASSWORD      - key password
+#   ANDROID_KEY_ALIAS         - key alias (e.g. kudlit-upload)
+#   SUPABASE_URL, SUPABASE_ANON_KEY - client-safe runtime config
+#   SENTRY_DSN (optional)     - crash reporting DSN
+# Optional (to auto-upload to Play): PLAY_SERVICE_ACCOUNT_JSON
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build signed AAB
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Write runtime env (.env) — client-safe values only
+        run: |
+          {
+            printf 'SUPABASE_URL=%s\n' "$SUPABASE_URL"
+            printf 'SUPABASE_ANON_KEY=%s\n' "$SUPABASE_ANON_KEY"
+          } > .env
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Decode upload keystore
+        run: echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/upload-keystore.jks
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+
+      - name: Write key.properties
+        run: |
+          cat > android/key.properties <<EOF
+          storePassword=${ANDROID_KEYSTORE_PASSWORD}
+          keyPassword=${ANDROID_KEY_PASSWORD}
+          keyAlias=${ANDROID_KEY_ALIAS}
+          storeFile=upload-keystore.jks
+          EOF
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build App Bundle (obfuscated, with symbols)
+        run: |
+          flutter build appbundle --release \
+            --obfuscate --split-debug-info=build/symbols \
+            --dart-define=SENTRY_DSN="$SENTRY_DSN"
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kudlit-release-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+
+      - name: Upload debug symbols
+        uses: actions/upload-artifact@v4
+        with:
+          name: kudlit-debug-symbols
+          path: build/symbols
+
+      # Optional: auto-publish to Play internal track. Enable once you have a
+      # Play service account JSON and the app exists in the Play Console.
+      # - name: Upload to Google Play (internal)
+      #   uses: r0adkll/upload-google-play@v1
+      #   with:
+      #     serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+      #     packageName: app.kudlit
+      #     releaseFiles: build/app/outputs/bundle/release/app-release.aab
+      #     track: internal
+      #     status: completed

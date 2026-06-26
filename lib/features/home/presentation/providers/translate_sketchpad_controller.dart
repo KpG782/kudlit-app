@@ -193,7 +193,7 @@ class TranslateSketchpadController extends Notifier<TranslateSketchpadState> {
         aiResponse: displayResponse,
         aiSource: source,
       );
-    } catch (error) {
+    } catch (_) {
       state = state.copyWith(
         aiBusy: false,
         aiResponse:

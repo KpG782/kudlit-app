@@ -395,7 +395,7 @@ class TranslateTextController extends Notifier<TranslateTextState> {
               .updateLastAiResponse(buffer.toString()),
         );
       }
-    } catch (error) {
+    } catch (_) {
       state = state.copyWith(
         aiBusy: false,
         aiResponse:

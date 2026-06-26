@@ -58,12 +58,15 @@ Legend: ✅ handled · ⚠️ partial · ❌ missing · 🩹 fixed this pass
 ## 4. Long-term plan (prioritized) — what's good to update next
 
 > **Status (2026-06-26 follow-up):** 🩹 **done & pushed** — model-dropdown retry (P2);
-> empty/blocked-AI fallbacks for translate + Butty (P3); the 3 routable "coming
-> soon" stubs wired to real routes + 2 unbuilt secondaries removed + translation-
-> history "Clear all" (P4). ⏸️ **still open** (need on-device native verification or
-> the domain fix): native camera-permission panel, no-camera boundary,
-> ModelNotSupported→Gallery, output typing indicator, live-glyph hint, profile
-> error-surfacing (domain ambiguity), quiz/gallery retry buttons.
+> empty/blocked-AI fallbacks + translate output "thinking" indicator (P3); the 3
+> routable "coming soon" stubs wired + 2 unbuilt secondaries removed +
+> translation-history "Clear all" (P4); quiz + character-gallery retry buttons;
+> **profile error-surfacing** (`ProfileSummaryNotifier.build()` now throws on a
+> real failure → a retry banner; new users still return `Right` via
+> `maybeSingle`, so they're unaffected). ⏸️ **remaining — fully specified with
+> drop-in code in `2026-06-26_deployment_changes_and_followups.md §8`** (need a
+> device to verify the native bits): native camera-permission panel, native
+> no-camera boundary, ModelNotSupported→Gallery fallback, live-glyph hint.
 
 
 ### P1 — "failed load looks like a wiped account" (highest user-trust risk)

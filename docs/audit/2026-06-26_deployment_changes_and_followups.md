@@ -222,3 +222,54 @@ not the theme-driving `AppPreferences`. Two clean options:
 2. Or have `app.dart` also watch the existing profile-prefs provider (note it may
    be async/auth-gated → guard for theme flicker).
 
+---
+
+## 8. Remaining scanner/native items — ready-to-implement specs
+
+These are the only UX-state items not committed, because they touch native
+camera/permission behavior (which can't be verified without a device and could
+regress the working `YOLOView` scanner) or need cross-widget threading. Each is
+fully specified below so it can be dropped in during a toolchain-in-the-loop pass.
+
+### 8.1 Native camera-permission-denied panel
+`ScannerCamera` renders `YOLOView` directly once the model path resolves
+(`scanner_camera.dart:357-369`); a native denial yields a black view with no
+guidance. Add `permission_handler: ^11.3.1` to pubspec, then:
+```dart
+// before building YOLOView (native only):
+final PermissionStatus status = await Permission.camera.status;
+if (status.isDenied) {
+  final PermissionStatus req = await Permission.camera.request();
+  if (!req.isGranted) return _CameraPermissionPanel(
+    permanentlyDenied: req.isPermanentlyDenied,
+    onOpenSettings: openAppSettings,            // from permission_handler
+    onRetry: () => ref.invalidate(/* the gate provider */),
+  );
+}
+```
+`_CameraPermissionPanel`: Butty illustration + "Kudlit needs camera access to
+scan Baybayin." + an "Open settings" button (when permanently denied) or "Allow
+camera". **Verify on a device** that this doesn't double-prompt with
+`ultralytics_yolo`'s own request.
+
+### 8.2 Native no-camera / init-failure boundary
+Web already handles `cameras.isEmpty` (`scanner_camera.dart:456-462`). For
+native, wrap the `YOLOView` mount in a try/error path and, on bind failure,
+surface a `ScanNotice` ("No camera available — use Gallery instead") with the
+existing gallery action. Reuse `_noticeForCaptureError` styling.
+
+### 8.3 ModelNotSupportedScreen → "Try Gallery"
+`ModelNotSupportedScreen` (`model_not_supported_screen.dart:36-74`) is a
+dead-end. Add an `onTryGallery` callback param and a `FilledButton('Try Gallery
+instead')`; thread the callback from `ScannerCamera` (where it's shown,
+`scanner_camera.dart:331-334`) up to `scan_tab.dart`, which already owns the
+gallery-pick flow (`scanTabControllerProvider` still-image path). Gallery
+scanning works without the live camera, so unsupported devices stay usable.
+
+### 8.4 Live "frame a glyph" hint
+When the camera is live and `aggregatedWinner == null` (`scan_tab.dart:445-463`),
+show a subtle centered hint ("Frame a Baybayin glyph") after ~1.5s idle. Gate on
+a `Timer` reset by each detection so it only appears when nothing is detected;
+hide it the moment a winner appears. Keep it low-opacity so it doesn't fight the
+camera feed.
+

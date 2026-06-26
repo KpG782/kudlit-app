@@ -47,7 +47,9 @@ class _CharacterGalleryScreenState
       ),
       body: state.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (Object e, _) => const _GalleryErrorBody(),
+        error: (Object e, _) => _GalleryErrorBody(
+          onRetry: () => ref.invalidate(characterGalleryProvider),
+        ),
         data: (List<GlyphEntry> entries) => _GalleryBody(
           entries: entries,
           query: _search.text,
@@ -71,14 +73,27 @@ class _GalleryFilter {
 }
 
 class _GalleryErrorBody extends StatelessWidget {
-  const _GalleryErrorBody();
+  const _GalleryErrorBody({required this.onRetry});
+
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Text(
-        'Could not load glyphs.',
-        style: Theme.of(context).textTheme.bodyMedium,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            'Could not load glyphs.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 12),
+          FilledButton.tonalIcon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Try again'),
+          ),
+        ],
       ),
     );
   }

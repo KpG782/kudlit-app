@@ -49,7 +49,9 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
       ),
       body: quizAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (Object e, _) => const _QuizErrorBody(),
+        error: (Object e, _) => _QuizErrorBody(
+          onRetry: () => ref.read(quizProvider.notifier).loadQuiz(),
+        ),
         data: (QuizState? state) => state == null
             ? const _QuizEmptyBody()
             : _QuizDataBody(
@@ -98,14 +100,27 @@ class _QuizDataBody extends ConsumerWidget {
 }
 
 class _QuizErrorBody extends StatelessWidget {
-  const _QuizErrorBody();
+  const _QuizErrorBody({required this.onRetry});
+
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Text(
-        'Failed to load quiz.',
-        style: Theme.of(context).textTheme.bodyMedium,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            'Failed to load quiz.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 12),
+          FilledButton.tonalIcon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Try again'),
+          ),
+        ],
       ),
     );
   }

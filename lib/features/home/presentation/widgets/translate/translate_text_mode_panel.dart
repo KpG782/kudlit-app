@@ -139,6 +139,23 @@ class TranslateTextModePanel extends StatelessWidget {
                             body: state.aiResponse,
                             sourceLabel: state.aiSource?.label,
                           ),
+                        ] else if (state.aiBusy) ...<Widget>[
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Butty is thinking…',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
                         ],
                       ],
                     )

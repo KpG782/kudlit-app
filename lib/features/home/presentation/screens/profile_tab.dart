@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fpdart/fpdart.dart' show Option;
 import 'package:go_router/go_router.dart';
 
 import 'package:kudlit_ph/app/constants.dart';
@@ -145,10 +146,12 @@ class _UserProfile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme cs = Theme.of(context).colorScheme;
-    final ProfileSummary? summary = ref
-        .watch(profileSummaryNotifierProvider)
-        .value
-        ?.toNullable();
+    final AsyncValue<Option<ProfileSummary>> summaryAsync = ref.watch(
+      profileSummaryNotifierProvider,
+    );
+    final ProfileSummary? summary = summaryAsync.value?.toNullable();
+    final bool summaryFailed =
+        summaryAsync.hasError && !summaryAsync.hasValue;
 
     final String displayName =
         summary?.displayName ?? user.email.split('@').first;
@@ -172,6 +175,13 @@ class _UserProfile extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
+                  if (summaryFailed) ...<Widget>[
+                    _ProfileSyncErrorBanner(
+                      onRetry: () =>
+                          ref.invalidate(profileSummaryNotifierProvider),
+                    ),
+                    SizedBox(height: compact ? 10 : 12),
+                  ],
                   _ProfileRow(
                     cs: cs,
                     displayName: displayName,
@@ -202,6 +212,38 @@ class _UserProfile extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _ProfileSyncErrorBanner extends StatelessWidget {
+  const _ProfileSyncErrorBanner({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
+      decoration: BoxDecoration(
+        color: cs.errorContainer.withAlpha(70),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.error.withAlpha(70)),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.cloud_off_rounded, size: 18, color: cs.error),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Couldn\'t load your profile details.',
+              style: TextStyle(fontSize: 12.5, color: cs.onErrorContainer),
+            ),
+          ),
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
+      ),
     );
   }
 }

@@ -70,9 +70,21 @@ SaveProfilePreferences saveProfilePreferencesUseCase(Ref ref) {
 class ProfileSummaryNotifier extends _$ProfileSummaryNotifier {
   @override
   FutureOr<Option<ProfileSummary>> build() async {
-    return _fetchSummary();
+    // Surface a real fetch failure as AsyncError so the UI can show a retry
+    // instead of a silent email-prefix fallback. A brand-new user with no
+    // profile row returns Right(default summary) from the datasource
+    // (`.maybeSingle()`), NOT Left — so only genuine errors reach the throw.
+    final useCase = ref.read(getProfileSummaryUseCaseProvider);
+    final result = await useCase(const NoParams());
+    return result.fold(
+      (Failure failure) => throw failure,
+      (ProfileSummary summary) => Some(summary),
+    );
   }
 
+  // Used by the write-path refetches (refresh / updateDisplayName /
+  // updateAvatar): degrades to None on failure so a transient write-refetch
+  // error never throws out of those flows.
   Future<Option<ProfileSummary>> _fetchSummary() async {
     final useCase = ref.read(getProfileSummaryUseCaseProvider);
     final result = await useCase(const NoParams());

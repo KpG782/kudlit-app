@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kudlit Navbar — UX audit + 3 modern options</title>
+<style>
+  :root{
+    --bg:#0a0e1a; --panel:#0E1425; --content:#141b30; --line:#2a3354;
+    --ink:#e8ecf6; --muted:#9aa3c0; --blue:#6777B6; --blueBright:#8aa2ee;
+    --good:#46B986; --warn:#F5A623;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+    line-height:1.5;padding:28px 16px 60px}
+  .wrap{max-width:1080px;margin:0 auto}
+  h1{font-size:24px;margin:0 0 4px} h2{font-size:17px;margin:0 0 8px}
+  .sub{color:var(--muted);margin:0 0 24px}
+  .problem{background:#1a1326;border:1px solid #5a3a2a;border-radius:14px;padding:14px 16px;margin:0 0 28px}
+  .problem b{color:var(--warn)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px}
+  .card{background:#10162a;border:1px solid var(--line);border-radius:18px;padding:18px}
+  .tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.4px;
+    padding:3px 9px;border-radius:999px;background:rgba(103,119,182,.18);color:var(--blueBright);margin-bottom:10px}
+  .rec{background:rgba(70,185,134,.16);color:var(--good)}
+  .meta{font-size:12.5px;color:var(--muted);margin:10px 0 0}
+  .meta .ok{color:var(--good);font-weight:700}
+  ul{margin:8px 0 0;padding-left:18px;font-size:13px;color:var(--muted)} li{margin:3px 0}
+
+  /* ---- phone mock ---- */
+  .phone{width:300px;height:520px;margin:6px auto 0;background:var(--panel);
+    border:1px solid var(--line);border-radius:30px;position:relative;overflow:hidden;
+    box-shadow:0 22px 50px rgba(0,0,0,.5)}
+  .screen{position:absolute;inset:0;display:flex;flex-direction:column}
+  .appbar{height:52px;display:flex;align-items:center;gap:8px;padding:0 16px;
+    background:linear-gradient(90deg,#3F4E87,#6777B6);font-weight:800;font-size:15px;color:#fff}
+  .pagewrap{flex:1;position:relative;background:
+    radial-gradient(120% 80% at 50% 0,#1a2444 0,var(--content) 60%)}
+  .page{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:10px;opacity:0;transform:translateY(8px);transition:.28s ease;pointer-events:none}
+  .page.on{opacity:1;transform:none}
+  .page .glyph{font-size:46px}
+  .page .pt{font-weight:800;font-size:18px}
+  .page .ps{font-size:12.5px;color:var(--muted)}
+
+  /* ---- shared nav bits ---- */
+  .ico{width:22px;height:22px;display:block}
+  .navlabel{font-size:10.5px;font-weight:600;letter-spacing:.2px}
+
+  /* OPTION 1 — Material 3 NavigationBar (full width) */
+  .m3{height:66px;display:flex;background:#0c1326;border-top:1px solid var(--line)}
+  .m3 .item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .m3 .pill{display:flex;align-items:center;justify-content:center;width:46px;height:28px;border-radius:999px;transition:.2s}
+  .m3 .item.act{color:#fff}
+  .m3 .item.act .pill{background:var(--blue)}
+  .m3 .item.act .navlabel{color:#fff;font-weight:800}
+
+  /* OPTION 2 — Always-expanded floating glass pill (centered) */
+  .floatwrap{position:absolute;left:0;right:0;bottom:14px;display:flex;justify-content:center;pointer-events:none}
+  .glass{pointer-events:auto;display:flex;gap:2px;padding:6px;border-radius:999px;
+    background:rgba(20,27,48,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border:1px solid rgba(138,162,238,.28);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+  .glass .gi{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    width:62px;height:52px;border-radius:999px;color:var(--muted);cursor:pointer;transition:.22s;-webkit-tap-highlight-color:transparent}
+  .glass .gi.act{background:var(--blue);color:#fff}
+  .glass .gi.act .navlabel{color:#fff;font-weight:800}
+
+  /* OPTION 3 — Expanding active item (icons-only, active reveals label) */
+  .exp{height:64px;display:flex;align-items:center;gap:6px;padding:0 14px;background:#0c1326;border-top:1px solid var(--line)}
+  .exp .ei{display:flex;align-items:center;gap:8px;color:var(--muted);cursor:pointer;
+    height:42px;padding:0 12px;border-radius:999px;transition:.28s cubic-bezier(.4,0,.2,1);
+    flex:0 0 auto;-webkit-tap-highlight-color:transparent;overflow:hidden}
+  .exp .ei .navlabel{max-width:0;opacity:0;white-space:nowrap;transition:.28s}
+  .exp .ei.act{background:var(--blue);color:#fff;flex:1 1 auto}
+  .exp .ei.act .navlabel{max-width:90px;opacity:1;color:#fff;font-weight:800}
+
+  .switcher{display:flex;gap:6px;justify-content:center;margin:6px 0 14px}
+  .switcher button{background:#10162a;color:var(--muted);border:1px solid var(--line);
+    border-radius:999px;padding:7px 14px;font-size:12.5px;cursor:pointer}
+  .switcher button.on{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700}
+  .foot{color:var(--muted);font-size:12.5px;margin-top:10px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Kudlit Navbar — UX audit + 3 modern options</h1>
+  <p class="sub">Tap the tabs in each phone below — every option here switches pages in <b style="color:var(--good)">one tap</b>.</p>
+
+  <div class="problem">
+    <b>The problem today.</b> <code>FloatingTabNav</code> is a 64&nbsp;px pill in the bottom-right
+    corner that shows <i>only the current tab's icon</i>. To switch you <b>tap to expand</b>, then
+    <b>tap a destination</b> — <b>2 taps every time</b>, and the other 3 destinations are invisible
+    until you expand. That's the friction. All three options below fix it: destinations are always
+    visible and switching is a single tap.
+  </div>
+
+  <div class="switcher" id="sw"></div>
+
+  <div class="grid" id="grid"></div>
+
+  <p class="foot">Self-contained mockup · Kudlit palette (indigo #0E1425 / blue #6777B6) · open in any browser.</p>
+</div>
+
+<script>
+/* ---- icons (inline SVG) ---- */
+const I = {
+  scan:`<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M3 12h18"/></svg>`,
+  translate:`<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h7M9 3v2c0 4-2 7-6 8"/><path d="M5 9c0 3 4 5 6 5"/><path d="M12 20l4-9 4 9M13.5 17h5"/></svg>`,
+  learn:`<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7c-1.5-1.2-3.5-2-6-2H3v13h3c2.5 0 4.5.8 6 2 1.5-1.2 3.5-2 6-2h3V5h-3c-2.5 0-4.5.8-6 2Z"/><path d="M12 7v13"/></svg>`,
+  butty:`<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12Z"/></svg>`,
+};
+const TABS = [
+  {k:'scan', label:'Scan', glyph:'🔎', sub:'Point at Baybayin to read it'},
+  {k:'translate', label:'Translate', glyph:'ᜃ', sub:'Filipino ↔ Baybayin'},
+  {k:'learn', label:'Learn', glyph:'📖', sub:'Lessons, quiz & glyphs'},
+  {k:'butty', label:'Butty', glyph:'💬', sub:'Ask your AI companion'},
+];
+
+function phone(navHtml){
+  const pages = TABS.map((t,i)=>`<div class="page${i===0?' on':''}" data-page="${t.k}">
+      <div class="glyph">${t.glyph}</div><div class="pt">${t.label}</div><div class="ps">${t.sub}</div></div>`).join('');
+  return `<div class="phone"><div class="screen">
+      <div class="appbar">Kudlit</div>
+      <div class="pagewrap">${pages}</div>
+      ${navHtml}
+    </div></div>`;
+}
+
+const OPTIONS = [
+  {
+    id:'m3', tag:'Recommended', rec:true,
+    name:'1 · Material 3 NavigationBar',
+    why:'The standard, expected pattern. Full-width, always-visible, labels on, active pill indicator. Most accessible + instantly familiar.',
+    pros:['1 tap to switch','All destinations always visible','Matches Android conventions + a11y','Full-width = easy thumb reach'],
+    cons:['Least "unique" look (but you keep Kudlit colors)'],
+    nav(active){
+      return `<div class="m3">`+TABS.map(t=>`
+        <div class="item ${t.k===active?'act':''}" data-go="${t.k}">
+          <div class="pill">${I[t.k]}</div><span class="navlabel">${t.label}</span>
+        </div>`).join('')+`</div>`;
+    }
+  },
+  {
+    id:'glass', tag:'Keeps your brand', rec:false,
+    name:'2 · Floating glass pill (always expanded)',
+    why:'Keeps Kudlit’s signature floating, blurred-glass pill — but centered and ALWAYS showing all 4 tabs. Same vibe, no hidden state, 1 tap.',
+    pros:['Keeps the floating/glass brand identity','1 tap; all 4 always visible','Centered = better one-handed reach','Feels premium (blur + sliding highlight)'],
+    cons:['Floats over content (needs bottom padding)','Slightly less room for labels on tiny phones'],
+    nav(active){
+      return `<div class="floatwrap"><div class="glass">`+TABS.map(t=>`
+        <div class="gi ${t.k===active?'act':''}" data-go="${t.k}">
+          ${I[t.k]}<span class="navlabel">${t.label}</span>
+        </div>`).join('')+`</div></div>`;
+    }
+  },
+  {
+    id:'exp', tag:'Trendy', rec:false,
+    name:'3 · Expanding active item',
+    why:'Modern animated pattern: inactive tabs are icons only; the active tab expands to reveal its colored label pill. Compact, lively, still 1 tap.',
+    pros:['1 tap; very compact','Eye-catching micro-interaction (on-trend)','All destinations visible (as icons)'],
+    cons:['Inactive labels hidden (icon literacy needed)','Animation must respect reduced-motion'],
+    nav(active){
+      return `<div class="exp">`+TABS.map(t=>`
+        <div class="ei ${t.k===active?'act':''}" data-go="${t.k}">
+          ${I[t.k]}<span class="navlabel">${t.label}</span>
+        </div>`).join('')+`</div>`;
+    }
+  },
+];
+
+let current = OPTIONS[0];
+const grid = document.getElementById('grid');
+const sw = document.getElementById('sw');
+
+function render(){
+  // switcher
+  sw.innerHTML = OPTIONS.map(o=>`<button data-opt="${o.id}" class="${o.id===current.id?'on':''}">${o.name.split(' · ')[1]}</button>`).join('');
+  // card with phone for current option + summary cards for all
+  grid.innerHTML = OPTIONS.map(o=>{
+    const active = 'scan';
+    return `<div class="card">
+      <span class="tag ${o.rec?'rec':''}">${o.tag}</span>
+      <h2>${o.name}</h2>
+      <p class="meta">${o.why}</p>
+      ${phone(o.nav(active))}
+      <p class="meta"><span class="ok">Taps to switch: 1</span></p>
+      <ul>${o.pros.map(p=>`<li>✓ ${p}</li>`).join('')}${o.cons.map(c=>`<li>· ${c}</li>`).join('')}</ul>
+    </div>`;
+  }).join('');
+  wire();
+}
+
+function wire(){
+  // tab taps inside each phone
+  document.querySelectorAll('.phone').forEach(ph=>{
+    ph.querySelectorAll('[data-go]').forEach(el=>{
+      el.addEventListener('click',()=>{
+        const go = el.getAttribute('data-go');
+        // update nav active state within this phone
+        ph.querySelectorAll('[data-go]').forEach(n=>n.classList.toggle('act', n.getAttribute('data-go')===go));
+        // update page
+        ph.querySelectorAll('.page').forEach(p=>p.classList.toggle('on', p.getAttribute('data-page')===go));
+      });
+    });
+  });
+  sw.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    current = OPTIONS.find(o=>o.id===b.getAttribute('data-opt')); render();
+  }));
+}
+render();
+</script>
+</body>
+</html>

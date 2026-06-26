@@ -2,6 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:kudlit_ph/core/feedback/review_service.dart';
 
 const List<String> _lessonOrder = <String>[
   'vowels-01',
@@ -12,7 +15,7 @@ const List<String> _lessonOrder = <String>[
   'kudlit-01',
 ];
 
-class LessonCompletionOverlay extends StatelessWidget {
+class LessonCompletionOverlay extends ConsumerStatefulWidget {
   const LessonCompletionOverlay({
     super.key,
     required this.lessonId,
@@ -30,8 +33,29 @@ class LessonCompletionOverlay extends StatelessWidget {
   final VoidCallback onPracticeAgain;
   final VoidCallback onBack;
 
+  @override
+  ConsumerState<LessonCompletionOverlay> createState() =>
+      _LessonCompletionOverlayState();
+}
+
+class _LessonCompletionOverlayState
+    extends ConsumerState<LessonCompletionOverlay> {
+  @override
+  void initState() {
+    super.initState();
+    // Ask for a store review only on a genuine high-score delight moment.
+    // The OS throttles how often the prompt is actually shown.
+    if (widget.score >= 80) {
+      Future<void>.delayed(const Duration(milliseconds: 1600), () {
+        if (mounted) {
+          ref.read(reviewServiceProvider).maybeRequestReview();
+        }
+      });
+    }
+  }
+
   bool get _hasNext {
-    final int idx = _lessonOrder.indexOf(lessonId);
+    final int idx = _lessonOrder.indexOf(widget.lessonId);
     return idx >= 0 && idx < _lessonOrder.length - 1;
   }
 
@@ -53,13 +77,13 @@ class LessonCompletionOverlay extends StatelessWidget {
               ),
               child: _CompletionCard(
                 cs: cs,
-                lessonTitle: lessonTitle,
-                score: score,
+                lessonTitle: widget.lessonTitle,
+                score: widget.score,
                 hasNext: _hasNext,
                 compact: compact,
-                onNext: onNext,
-                onPracticeAgain: onPracticeAgain,
-                onBack: onBack,
+                onNext: widget.onNext,
+                onPracticeAgain: widget.onPracticeAgain,
+                onBack: widget.onBack,
               ),
             ),
           ),

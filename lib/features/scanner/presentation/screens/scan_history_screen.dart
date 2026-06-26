@@ -86,7 +86,9 @@ class _ScanHistoryList extends ConsumerWidget {
 
     return historyAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (Object e, _) => _ErrorState(message: e.toString()),
+      error: (Object e, _) => _ErrorState(
+        onRetry: () => ref.invalidate(scanHistoryNotifierProvider),
+      ),
       data: (List<ScanResult> results) {
         if (results.isEmpty) return const _EmptyState();
         return ListView.separated(
@@ -162,9 +164,9 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message});
+  const _ErrorState({required this.onRetry});
 
-  final String message;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -181,14 +183,28 @@ class _ErrorState extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: cs.error.withAlpha(90)),
             ),
-            child: Text(
-              'Could not load history.\n$message',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: cs.onErrorContainer,
-                height: 1.5,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(Icons.cloud_off_rounded, size: 36, color: cs.error),
+                const SizedBox(height: 12),
+                Text(
+                  "We couldn't load your scan history.\nCheck your connection "
+                  'and try again.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: cs.onErrorContainer,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                FilledButton.tonalIcon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: const Text('Try again'),
+                ),
+              ],
             ),
           ),
         ),

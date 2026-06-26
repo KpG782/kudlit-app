@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:kudlit_ph/core/audio/tts_service.dart';
 import 'output_actions.dart';
 
-class FilledOutput extends StatelessWidget {
+class FilledOutput extends ConsumerWidget {
   const FilledOutput({
     super.key,
     required this.baybayin,
@@ -21,7 +23,7 @@ class FilledOutput extends StatelessWidget {
   final VoidCallback onShare;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme cs = Theme.of(context).colorScheme;
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
@@ -57,6 +59,10 @@ class FilledOutput extends StatelessWidget {
                 color: cs.onSurface.withAlpha(205),
               ),
             ),
+            if (latin.trim().isNotEmpty) ...<Widget>[
+              const SizedBox(height: 8),
+              _ListenButton(text: latin),
+            ],
             SizedBox(height: narrow ? 18 : 24),
             OutputActions(
               copyLabel: copyLabel,
@@ -67,6 +73,25 @@ class FilledOutput extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _ListenButton extends ConsumerWidget {
+  const _ListenButton({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Semantics(
+      button: true,
+      label: 'Listen to pronunciation',
+      child: TextButton.icon(
+        onPressed: () => ref.read(ttsServiceProvider).speak(text),
+        icon: const Icon(Icons.volume_up_rounded, size: 18),
+        label: const Text('Listen'),
+      ),
     );
   }
 }

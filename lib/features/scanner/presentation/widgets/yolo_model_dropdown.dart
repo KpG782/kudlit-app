@@ -37,10 +37,23 @@ class YoloModelDropdown extends ConsumerWidget {
 
     return modelsAsync.when(
       loading: () => const _DropdownShell(child: _DropdownSpinner()),
-      error: (Object e, _) => _DropdownShell(
-        child: Text(
-          'Models unavailable',
-          style: TextStyle(color: Colors.white.withAlpha(200)),
+      error: (Object e, _) => GestureDetector(
+        onTap: () => ref.invalidate(availableYoloModelsProvider),
+        child: _DropdownShell(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Icon(Icons.refresh_rounded, size: 16, color: Colors.white),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  'Retry models',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: Colors.white.withAlpha(220)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       data: (List<AiModelInfo> models) {

@@ -25,12 +25,15 @@ class TranslationHistoryScreen extends StatelessWidget {
   }
 }
 
-class _TranslationHistoryHeader extends StatelessWidget {
+class _TranslationHistoryHeader extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme cs = Theme.of(context).colorScheme;
+    final bool hasHistory =
+        ref.watch(translationHistoryNotifierProvider).value?.isNotEmpty ??
+        false;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 10, 16, 8),
+      padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
@@ -68,10 +71,47 @@ class _TranslationHistoryHeader extends StatelessWidget {
               ],
             ),
           ),
+          if (hasHistory)
+            IconButton(
+              tooltip: 'Clear all',
+              icon: Icon(Icons.delete_sweep_outlined, color: cs.onSurface),
+              onPressed: () => _confirmClearAll(context, ref),
+            ),
         ],
       ),
     );
   }
+}
+
+Future<void> _confirmClearAll(BuildContext context, WidgetRef ref) async {
+  final bool confirmed =
+      await showDialog<bool>(
+        context: context,
+        builder: (BuildContext dialogContext) {
+          return AlertDialog(
+            title: const Text('Clear translation history?'),
+            content: const Text(
+              'This permanently removes all saved translations on this device.',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(dialogContext).colorScheme.error,
+                ),
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Clear all'),
+              ),
+            ],
+          );
+        },
+      ) ??
+      false;
+  if (!confirmed) return;
+  await ref.read(translationHistoryNotifierProvider.notifier).clearHistory();
 }
 
 class _TranslationHistoryList extends ConsumerWidget {

@@ -153,27 +153,40 @@ class ButtyChatController extends Notifier<ButtyChatState> {
           ],
         );
       }
-      debugPrint(
-        '[Butty] response completed | chars=${buffer.toString().length}',
-      );
-      unawaited(
-        ref
-            .read(chatHistoryNotifierProvider.notifier)
-            .addMessage(
-              ChatMessage(
-                text: buffer.toString(),
-                isUser: false,
-                timestamp: DateTime.now(),
-              ),
+      final String full = buffer.toString();
+      debugPrint('[Butty] response completed | chars=${full.length}');
+      if (full.trim().isEmpty) {
+        // Zero-token / blocked response — show a fallback instead of a silent
+        // blank bubble (the message list filters out empty Butty bubbles).
+        state = state.copyWith(
+          messages: <ChatMsg>[
+            ...state.messages.take(state.messages.length - 1),
+            (
+              isButty: true,
+              text: 'Hmm, I blanked on that one — try rephrasing?',
             ),
-      );
+          ],
+        );
+      } else {
+        unawaited(
+          ref
+              .read(chatHistoryNotifierProvider.notifier)
+              .addMessage(
+                ChatMessage(
+                  text: full,
+                  isUser: false,
+                  timestamp: DateTime.now(),
+                ),
+              ),
+        );
 
-      // Memory extraction runs in the background — never blocks the user.
-      unawaited(
-        ref
-            .read(memoryExtractionServiceProvider)
-            .extractIfDue(_userMessageCount),
-      );
+        // Memory extraction runs in the background — never blocks the user.
+        unawaited(
+          ref
+              .read(memoryExtractionServiceProvider)
+              .extractIfDue(_userMessageCount),
+        );
+      }
     } catch (_) {
       debugPrint('[Butty] response failed');
       state = state.copyWith(

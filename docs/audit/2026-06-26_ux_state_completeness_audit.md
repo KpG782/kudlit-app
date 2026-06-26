@@ -57,6 +57,15 @@ Legend: ✅ handled · ⚠️ partial · ❌ missing · 🩹 fixed this pass
 
 ## 4. Long-term plan (prioritized) — what's good to update next
 
+> **Status (2026-06-26 follow-up):** 🩹 **done & pushed** — model-dropdown retry (P2);
+> empty/blocked-AI fallbacks for translate + Butty (P3); the 3 routable "coming
+> soon" stubs wired to real routes + 2 unbuilt secondaries removed + translation-
+> history "Clear all" (P4). ⏸️ **still open** (need on-device native verification or
+> the domain fix): native camera-permission panel, no-camera boundary,
+> ModelNotSupported→Gallery, output typing indicator, live-glyph hint, profile
+> error-surfacing (domain ambiguity), quiz/gallery retry buttons.
+
+
 ### P1 — "failed load looks like a wiped account" (highest user-trust risk)
 - 🩹 **DONE — `learning_progress_screen.dart:35`**: added loading + error/retry guards (`_ProgressScaffold` / `_ProgressErrorView`) so a failed fetch no longer renders as "0 lessons, everything locked". Empty map still = genuine new user.
 - 🩹 **DONE — `learn_home_body.dart:122`**: the Learn tab keeps its static lessons but now shows a non-blocking "Couldn't sync your progress — Retry" banner on `hasError`. Streak already degrades gracefully via the local-persistence cache.

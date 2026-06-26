@@ -373,11 +373,21 @@ class TranslateTextController extends Notifier<TranslateTextState> {
         );
       }
       final String displayResponse = cleanAssistantOutput(buffer.toString());
-      state = state.copyWith(
-        aiBusy: false,
-        aiResponse: displayResponse,
-        aiSource: source,
-      );
+      if (displayResponse.trim().isEmpty) {
+        // Blocked / zero-token response — give the tap visible feedback
+        // instead of leaving the output area silently unchanged.
+        state = state.copyWith(
+          aiBusy: false,
+          aiResponse: 'Butty didn\'t have anything to add this time.',
+          clearAiSource: true,
+        );
+      } else {
+        state = state.copyWith(
+          aiBusy: false,
+          aiResponse: displayResponse,
+          aiSource: source,
+        );
+      }
       if (buffer.isNotEmpty) {
         unawaited(
           ref

@@ -98,10 +98,10 @@ class _ProfileManagementSectionState
         description: learningDesc,
         primaryActionId: 'view-progress',
         primaryActionLabel: 'View progress',
-        primaryActionMessage: 'Progress dashboard will be available soon.',
+        primaryActionMessage: 'view-progress',
         secondaryActionId: 'continue-lesson',
         secondaryActionLabel: 'Continue lesson',
-        secondaryActionMessage: 'Lesson resume flow is available soon.',
+        secondaryActionMessage: 'continue-lesson',
       ),
       ProfileManagementItem(
         id: 'scanner-history',
@@ -110,10 +110,7 @@ class _ProfileManagementSectionState
         description: scanDesc,
         primaryActionId: 'open-scan-history',
         primaryActionLabel: 'Open history',
-        primaryActionMessage: 'Scanner history will be available soon.',
-        secondaryActionId: 'clear-scan-history',
-        secondaryActionLabel: 'Clear history',
-        secondaryActionMessage: 'History cleanup flow is available soon.',
+        primaryActionMessage: 'open-scan-history',
       ),
       ProfileManagementItem(
         id: 'translator-history-bookmarks',
@@ -122,10 +119,7 @@ class _ProfileManagementSectionState
         description: translationDesc,
         primaryActionId: 'view-saved-translations',
         primaryActionLabel: 'View saved',
-        primaryActionMessage: 'Saved translations will be available soon.',
-        secondaryActionId: 'add-bookmark',
-        secondaryActionLabel: 'Add bookmark',
-        secondaryActionMessage: 'Bookmark flow is available soon.',
+        primaryActionMessage: 'view-saved-translations',
       ),
       const ProfileManagementItem(
         id: 'butty-data',
@@ -192,6 +186,18 @@ class _ProfileManagementSectionState
     }
     if (message == 'open-butty-data') {
       context.push(AppConstants.routeButtyData);
+      return;
+    }
+    if (message == 'view-progress' || message == 'continue-lesson') {
+      context.push(AppConstants.routeLearningProgress);
+      return;
+    }
+    if (message == 'open-scan-history') {
+      context.push(AppConstants.routeScanHistory);
+      return;
+    }
+    if (message == 'view-saved-translations') {
+      context.push(AppConstants.routeTranslationHistory);
       return;
     }
     if (message == 'delete-account') {
